@@ -10,91 +10,7 @@
 #include <string>
 #include <cassert>
 
-//#define USE_FAST_JUMPS
-
 #include "bf.h"
-
-const char    CHR_EOF     = '\0';
-const char    CHR_PTR_INC = '>';
-const char    CHR_PTR_DEC = '<';
-const char    CHR_MEM_INC = '+';
-const char    CHR_MEM_DEC = '-';
-const char    CHR_WRITE   = '.';
-const char    CHR_READ    = ',';
-const char    CHR_JMP_FWD = '[';
-const char    CHR_JMP_BAC = ']';
-
-const uint8_t OP_EOF     = 0;
-const uint8_t OP_NOP     = 1;
-const uint8_t OP_PTR_INC = 2;
-const uint8_t OP_PTR_DEC = 3;
-const uint8_t OP_MEM_INC = 4;
-const uint8_t OP_MEM_DEC = 5;
-const uint8_t OP_READ    = 6;
-const uint8_t OP_WRITE   = 7;
-const uint8_t OP_JMP_FWD = 9;
-const uint8_t OP_JMP_BAC = 10;
-
-namespace BF
-{
-    bool isInstruction( char c )
-    {
-        return c == CHR_PTR_INC || 
-               c == CHR_PTR_DEC || 
-               c == CHR_MEM_INC || 
-               c == CHR_MEM_DEC ||
-               c == CHR_WRITE   || 
-               c == CHR_READ    || 
-               c == CHR_JMP_FWD || 
-               c == CHR_JMP_BAC;
-    }
-
-    Instruction convert( char c )
-    {
-        switch( c )
-        {
-            case CHR_PTR_INC:
-                return Instruction( OP_PTR_INC, 1 );
-            case CHR_PTR_DEC:
-                return Instruction( OP_PTR_DEC, 1 );
-            case CHR_MEM_INC:
-                return Instruction( OP_MEM_INC, 1 );
-            case CHR_MEM_DEC:
-                return Instruction( OP_MEM_DEC, 1 );
-            case CHR_READ:
-                return Instruction( OP_READ, 0 );
-            case CHR_WRITE:
-                return Instruction( OP_WRITE, 0 );
-            case CHR_JMP_FWD:
-                return Instruction( OP_JMP_FWD, 0 );
-            case CHR_JMP_BAC:
-                return Instruction( OP_JMP_BAC, 0 );
-            default:
-                return Instruction( OP_NOP, 0 );
-        }
-    }
-
-    void write( const BlockT& d )
-    {
-        std::cout << static_cast<char>(d);
-    }
-
-    BlockT read()         // fixme
-    {
-        BlockT d;
-
-        if( std::cin >> d )
-        {
-            return d;
-        }
-        else    // if ( cin.eof() ) ... else ...
-        {
-            assert("Invalid input failure");
-        }
-
-        return d;
-    }
-}
 
 BFProgram::BFProgram( const std::string& codestr )
     : m_codestr(codestr),
@@ -231,12 +147,12 @@ bool BFProgram::compile()
             //
             // Is this a jump instruction?
             //
-            if ( *itr == CHR_JMP_FWD )
+            if ( instr.opcode() == OP_JMP_FWD )
             {
                 // This is a forward jump. Record its position
                 jumps.push(icount);
             }
-            else if ( *itr == CHR_JMP_BAC )
+            else if ( instr.opcode() == OP_JMP_BAC )
             {
                 // This is a backward jump. Pop the corresponding
                 // forward jump marker off the stack, and update both

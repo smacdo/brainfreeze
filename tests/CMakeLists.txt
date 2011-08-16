@@ -14,6 +14,7 @@ include_directories( ${PROJECT_SOURCE_DIR}/src
 add_executable(test-brainfreeze
                ${test_srcs}
                ${PROJECT_SOURCE_DIR}/src/bf.cpp
+               ${PROJECT_SOURCE_DIR}/src/bfutils.cpp
                ${GTEST_ROOT}/googletestrunner.cpp )
 
 target_link_libraries(test-brainfreeze gtest)

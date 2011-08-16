@@ -17,6 +17,7 @@ class Instruction;
 class BFProgram;
 
 typedef int8_t BlockT;
+typedef int8_t OpcodeT;
 typedef std::vector<Instruction> Instructions;
 typedef std::vector<BlockT>      Memory;
 
@@ -25,16 +26,34 @@ typedef Instructions::const_iterator InstrConstItr;
 typedef Memory::iterator             MemoryItr;
 typedef Memory::const_iterator       MemoryConstItr;
 
+enum Opcodes
+{
+    OP_EOF = 0,
+    OP_NOP = 1,
+    OP_PTR_INC = 2,
+    OP_PTR_DEC = 3,
+    OP_MEM_INC = 4,
+    OP_MEM_DEC = 5,
+    OP_READ    = 6,
+    OP_WRITE   = 7,
+    OP_JMP_FWD = 9,
+    OP_JMP_BAC = 10
+};
+
 void runTests();
 
 namespace BF
 {
+    // Checks if a character is a valid BF instruction.
     bool isInstruction( char c );
 
+    // Takes a character and returns the equivilant Brainfreeze VM instruction
     Instruction convert( char c );
 
+    // Writes output
     void write( const BlockT& d );
 
+    // Reads input
     BlockT read();
 }
 
