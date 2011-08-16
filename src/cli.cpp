@@ -1,15 +1,13 @@
 /**
  * Brainfreeze Language Interpreter
- * (c) 2009 Scott MacDonald. All rights reserved.
+ * (c) 2011 Scott MacDonald. All rights reserved.
  *
- * Command line interface to the interpreter
+ * Command line interface to the brainfreeze interpreter
  */
 #include "bf.h"
 
 #include <iostream>
 #include <fstream>
-#include <string.h>
-#include <vector>
 #include <sstream>
 
 #include <boost/program_options.hpp>
@@ -17,7 +15,14 @@
 namespace po = boost::program_options;
 
 /**
- * Loads from disk
+ * Slurps a text file from disk into memory and stores it in the provided
+ * STL string instance.
+ *
+ * \param filename Path to the file that is to be loaded
+ * \param filedata String instance that will be populated with the contents
+ *                 of the text file
+ * \returns        True if the function was able to read the file from disk,
+ *                 otherwise it will return false
  */
 bool loadFromDisk( const std::string& filename,
 						 std::string& filedata )
@@ -50,11 +55,37 @@ bool loadFromDisk( const std::string& filename,
 }
 
 /**
- * Prints version information to the console
+ * Summons forth helpful version information along with licensing and
+ * copyright information.
  */
 void printVersionInfo()
 {
-    std::cout << "Brainfreeze 0.1 (build 349)" << std::endl;
+    std::cout
+        << "Brainfreeze Interpreter " << BRAINFREEZE_VERSION << std::endl
+        << "Copyright (C) 2011 Scott MacDonald." << std::endl
+        << "License GPLv2: GNU GPL version 2 "
+        << "<http://www.gnu.org/licenses/gpl.html>" << std::endl
+        << "This is free software: you are free to change it and redistribute "
+        << "it." << std::endl
+        << "There is NO WARRANTY, to the extent permitted by law." << std::endl
+        << std::endl;
+}
+
+/**
+ * Prints a big chunk of descriptive text detailing the options available
+ * to the user when running the brainfreeze command line interpreter. Usually
+ * called when they screw up their input :)
+ *
+ * \param descr The program options that were configured for the command line
+ */
+void printHelp( const po::options_description& descr )
+{
+    std::cout
+        << "Usage: brainfreeze [options] [scriptfile]" << std::endl
+        << descr << std::endl << std::endl
+        << "Report bugs to: bugs@whitespaceconsideredharmful.com" << std::endl
+        << "Website: http://whitespaceconsideredharmful.com/bf"
+        << std::endl << std::endl;
 }
 
 int main( int argc, char * argv[] )
@@ -111,8 +142,7 @@ int main( int argc, char * argv[] )
     //
     if ( vm.count("help") )
     {
-        std::cout << "Usage: brainfreeze [options] [scriptfile]" << std::endl
-                  << generic << std::endl;
+        printHelp( generic );
         return 1;
     }
     else if ( vm.count("version") )

@@ -7,6 +7,8 @@
 #ifndef BRAINFREEZE_H
 #define BRAINFREEZE_H
 
+#define BRAINFREEZE_VERSION 0.2
+
 #include <stdint.h>
 #include <vector>
 #include <string>
