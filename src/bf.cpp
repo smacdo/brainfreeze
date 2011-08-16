@@ -4,14 +4,18 @@
  *
  * Virtual machine source code
  */
-#include <iostream>
-#include <vector>
 #include <stack>
 #include <string>
 #include <cassert>
 
 #include "bf.h"
 
+/**
+ * Brainfreeze program constructor. Takes as input the brainfreeze program
+ * that it will eventually run
+ *
+ * \param codestr The brainfreeze program
+ */
 BFProgram::BFProgram( const std::string& codestr )
     : m_codestr(codestr),
       m_instructions(),
@@ -28,6 +32,13 @@ BFProgram::BFProgram( const std::string& codestr )
     m_mp = m_memory.begin();
 }
 
+/**
+ * Run the loaded brainfreeze program. This method will run the brainfreeze
+ * program until it has reached the end of script command.
+ *
+ * \returns True if the program executed through to completion, or false if
+ *          there were errors when attempting to run.
+ */
 bool BFProgram::run()
 {
     // Make sure the program was compiled, and if it wasn't then compile it
@@ -52,6 +63,9 @@ bool BFProgram::run()
     return true;
 }
 
+/**
+ * Runs the next instruction that is scheduled for execution.
+ */
 void BFProgram::runStep()
 {
     switch( m_ip->opcode() )
@@ -119,10 +133,14 @@ void BFProgram::runStep()
 /**
  * Compiles a brainfreeze program. It converts the program's
  * textual representation into a program containing only the
- * brainfreeze instructions.
+ * brainfreeze vm instructions.
  *
- * Additionally, it performs jump optimizations so jumps no
- * longer need to be calculated on execution.
+ * Additionally, it performs several compile time optimizations in order to
+ * speed up execution time. These optimizations include pre-calculating
+ * jump offsets and fusing sequential identical instructions.
+ *
+ * \return Returns true if the program was succesfully compiled, otherwise
+ *         it will return false to indicate the presence of errors
  */
 bool BFProgram::compile()
 {
@@ -217,6 +235,12 @@ bool BFProgram::compile()
     return true;
 }
 
+/**
+ * Returns the specific value located at the requested memory offset
+ *
+ * \param   The memory offset to fetch
+ * \returns The value that was stored in that memory block
+ */
 BlockT BFProgram::valueAt( std::size_t offset ) const
 {
     assert( offset < m_memory.size() );
@@ -224,18 +248,28 @@ BlockT BFProgram::valueAt( std::size_t offset ) const
     return m_memory[ offset ];
 }
 
+/**
+ * Returns the current instruction pointer offset
+ * \returns Instruction pointer offset
+ */
 std::size_t BFProgram::instructionOffset() const
 {
     return m_ip - m_instructions.begin();
 }
 
+/**
+ * Returns the memory pointer offset
+ * \returns Memory pointer offset
+ */
 std::size_t BFProgram::memoryPointerOffset() const
 {
     return m_mp - m_memory.begin();
 }
 
 /**
- * Raises an error with the program, and halts execution
+ * Raises an error with this brainfreeze script, and halts execution.
+ *
+ * \param message A string informing the user what error occurred
  */
 void BFProgram::raiseError( const std::string& message )
 {
