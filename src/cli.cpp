@@ -12,7 +12,9 @@
 #include <vector>
 #include <sstream>
 
-const char * BF_EXAMPLE = "++++++++++[>+++++++>++++++++++>+++>+<<<<-]>++.>+.+++++++..+++.>++.<<+++++++++++++++.>.+++.------.--------.>+.>.";
+#include <boost/program_options.hpp>
+
+namespace po = boost::program_options;
 
 /**
  * Loads from disk
@@ -57,38 +59,102 @@ void printVersionInfo()
 
 int main( int argc, char * argv[] )
 {
-	std::string code;
+    //
+    // Create our list of allowable arguments
+    //
+    unsigned int memoryBlockCount, memoryBlockSize, eolValue;
+   
+    // Command line only options
+    po::options_description generic("Generic Options");
+    generic.add_options()
+        ("help",    "Show this help message and exit")
+        ("script",   po::value<std::string>(),
+                    "Path to brainfreeze script file")
+        ("version", "Output version informaton and exit")
+    ;
 
-//    runTests();
+    po::positional_options_description pod;
+    pod.add("script", -1);
+ 
+    // Options that are allowed in both the command line and in a
+    // config file
+    po::options_description config("Configuration");
+    config.add_options()
+        ("memlength",
+         po::value<unsigned int>(&memoryBlockCount)->default_value(30000),
+         "Number of memory storage units for script" )
+        ("memsize",
+         po::value<unsigned int>(&memoryBlockSize)->default_value(8),
+         "Size in bits of each memory storage unit (8,16,32)")
+        ("eol",
+         po::value<unsigned int>(&eolValue)->default_value(10),
+         "EOL (end of line) ASCII value")
+    ;
+
+    generic.add(config);
+
+    // Read from the command line
+    po::variables_map vm;
+    po::store( po::command_line_parser( argc, argv ).
+               options(generic).positional(pod).run(),
+               vm );
+    po::notify( vm );
+
+    // Read from an input file
+    std::ifstream configfile("brainfreeze.cfg");
+    po::store( po::parse_config_file( configfile, config ), vm );
+    po::notify( vm );
+
 
     //
-    // Command line parsing
+    // So what options did we get?
     //
-    FILE * input  = stdin;
-    FILE * output = stdout;
-
-    for ( int i = 1; i < argc; ++i )
+    if ( vm.count("help") )
     {
-        char * arg = argv[i];
-
-        // Version?
-        if ( strcmp( arg, "-v" ) == 0 ||
-             strcmp( arg, "--version" ) == 0 )
-        {
-            printVersionInfo();
-            return 0;
-        }
-        else
-        {
-            // Must be a file then
-            if ( false == loadFromDisk( arg, code ) )
-            {
-                std::cerr << "Could not open file: " << arg << std::endl;
-                return 0;
-            }
-        }
+        std::cout << "Usage: brainfreeze [options] [scriptfile]" << std::endl
+                  << generic << std::endl;
+        return 1;
+    }
+    else if ( vm.count("version") )
+    {
+        printVersionInfo();
+        return 0;
+    }
+    else if ( vm.count("script") < 1 )
+    {
+        std::cerr << "You must specify at least on brainfreeze script to run"
+                  << std::endl;
+        return 0;
     }
 
-    BFProgram app(code);
-    app.run();
+    //
+    // Load the script into memory and run that sucker
+    //
+    std::string contents;
+    std::string scriptfile = vm["script"].as<std::string>();
+
+    if ( false == loadFromDisk( scriptfile, contents ) )
+    {
+        std::cerr << "Could not open script: " << contents << std::endl;
+        return 2;
+    }
+
+    BFProgram app( contents );
+
+    if (! app.compile() )
+    {
+        std::cerr << "Failed to compile script: "
+                  << app.errorText() << std::endl;
+        return 3;
+    }
+
+    if (! app.run() )
+    {
+        std::cerr << "Failed to execute script: "
+                  << app.errorText() << std::endl;
+        return 4;
+    }
+
+    // It worked! woohoo
+    return 0;
 }

@@ -132,12 +132,12 @@ bool BFProgram::run()
     {
         runStep();      // maybe bring m_ip++ here and change runStep name
     }
+
+    return true;
 }
 
 void BFProgram::runStep()
 {
-    int depth = 0;
-
     switch( m_ip->opcode() )
     {
         case OP_PTR_INC:
@@ -303,7 +303,6 @@ bool BFProgram::compile()
 
 BlockT BFProgram::valueAt( std::size_t offset ) const
 {
-    assert( offset >= 0 );
     assert( offset < m_memory.size() );
 
     return m_memory[ offset ];

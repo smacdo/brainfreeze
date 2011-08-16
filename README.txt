@@ -22,22 +22,27 @@ consult Google or Wikipedia.
 
 Requirements
 ------------
-Currently only depends on having a relatively recent version of G++ on
-Linux or OS X. I have not personally tested it on Windows, but I do not
-see any reason why it wouldn't compile under Visual Studio.
+Brainfreeze was written to be as cross platform as possible, though so
+far I have only tested it under Linux. Requirements:
+
+    1. Modern C++ compiler (GCC 4.3+, VC++ 2010, etc
+    2. CMake 2.8
+    3. Boost 1.47 (for program options)
 
 Building
 ------------
 Check out the latest version from git, run CMake to generate a Makefile
 and then do the standard make / make install.
 
-    1. git co ...
+    1. git clone git@github.com:smacdo/brainfreeze.git
     2. cd brainfreeze
     3. mkdir build
     4. cd build
-    5. cmake ../
-    6. make
-    7. make install
+    5. ccmake ../
+        a. Set CMAKE_BUILD_TYPE to release for significant perf increase
+    6. cmake ../
+    7. make
+    8. make install
 
 Running
 -------

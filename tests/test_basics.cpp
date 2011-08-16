@@ -58,14 +58,14 @@ TEST(BrainfreezeLanguage, InstructionClass)
 {
     Instruction instr( 3, 42 );
 
-    ASSERT_EQ( 3,  instr.opcode() );
-    ASSERT_EQ( 42, instr.param() );
+    ASSERT_EQ( static_cast<uint8_t>(3),  instr.opcode() );
+    ASSERT_EQ( static_cast<uint32_t>(42), instr.param() );
     ASSERT_TRUE( instr.isA(3) );
 
     instr.setParam( 96 );
 
-    ASSERT_EQ( 3, instr.opcode() );
-    ASSERT_EQ( 96, instr.param() );
+    ASSERT_EQ( static_cast<uint8_t>(3), instr.opcode() );
+    ASSERT_EQ( static_cast<uint32_t>(96), instr.param() );
     ASSERT_TRUE( instr.isA(3) );
 }
 
