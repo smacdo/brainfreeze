@@ -1,2 +1,4 @@
-add_executable(brainfreeze bf.cpp cli.cpp)
-add_executable(test-brainfreeze bf.cpp tests.cpp)
+include_directories(.)
+set(SOURCES bf.cpp cli.cpp)
+
+add_executable(brainfreeze ${SOURCES})

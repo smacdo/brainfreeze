@@ -1,0 +1,5 @@
+    - Add compiler flags to CMake (-O2 for example)
+    - Add C backend
+    - Add program option parsing
+    - Add block size and length options
+    - Package it all up
