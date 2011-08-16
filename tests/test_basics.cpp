@@ -1,207 +1,180 @@
 #include "bf.h"
-#include <cassert>
-#include <iostream>
-#include <vector>
+#include <gtest.h>
 
-class UnitTest
-{
-public:
-    UnitTest()
-        : m_line( 0 ),
-          m_reason( "N/A" ),
-          m_failed( false )
+namespace testing {
+    AssertionResult CheckMem( BFProgram& app, size_t offset, BlockT expected )
     {
-    }
+        BlockT actual = app.valueAt( offset );
 
-    virtual void run() = 0;
-    virtual const char* name() const = 0;
-    
-    int line() const { return m_line; }
-    bool failed() const { return m_failed; }
-    const char * reason() const { return m_reason; }
-
-protected:
-    int m_line;
-    const char * m_reason;
-    bool m_failed;
-};
-
-std::vector<UnitTest*> GTests;
-
-class UnitTestContainer
-{
-public:
-    
-    UnitTestContainer( UnitTest* test )
-    {
-        GTests.push_back( test );
-    }
-};
-
-#define TEST(X) class UnitTest##X : public UnitTest \
-{ public: void run(); const char* name() const; }; \
-UnitTestContainer container##X( new UnitTest##X() ); \
-const char* UnitTest##X::name() const { return #X; } \
-void UnitTest##X::run()
-
-#define assertEquals(X,Y) if((X)!=(Y)){ m_failed = true; m_line = __LINE__; m_reason = "Equality assertion failed"; return; }
-#define assertNotEquals(X,Y) if ((X)==(Y)) { m_failed = true; m_line = __LINE__; m_reason "Inequality assertion failed"; return; }
-#define assertTrue(X) if((X)==false){ m_failed = true; m_line = __LINE__; m_reason = "Assert true failed"; return; }
-#define assertFalse(X) if ((X)==true){ m_failed = true; m_line = __LINE__; m_reason = "Assert false failed"; return; }
-
-#define CODE(X) BFProgram app(std::string(X)); app.run();
-#define CHECKMEM(X,Y) if(app.valueAt((X))!=(Y)){ m_failed = true; m_line = __LINE__; m_reason = "Memory value assertion failed"; return; }
-#define CHECKIPTR(P) if(app.instructionOffset()!=(P)){ m_failed = true; m_line = __LINE__; m_reason = "Instruction position assertion failed"; return; }
-#define CHECKMPTR(P) if(app.memoryPointerOffset()!=(P)){ m_failed = true; m_line = __LINE__; m_reason = "Memory position assertion failed"; return; }
-
-TEST(InstructionClass)
-{
-    //
-    // Instructions test
-    //
-    Instruction instr( 3, 42 );
-
-    assertEquals( instr.opcode(), 3 );
-    assertEquals( instr.param(), 42 );
-    assertTrue(   instr.isA(3) );
-
-    instr.setParam( 96 );
-
-    assertEquals( instr.opcode(), 3 );
-    assertEquals( instr.param(), 96 );
-    assertTrue( instr.isA(3) );
-}
-
-TEST(Empty)
-{
-    CODE("");
-    CHECKMEM(0,0);
-    CHECKIPTR(0);
-    CHECKMPTR(0);
-}
-
-TEST(AddOp)
-{
-    CODE("+");
-    CHECKMEM(0,1);
-}
-
-TEST(SubOp)
-{
-    CODE("-");
-    CHECKMEM(0,-1);
-}
-
-TEST(LeftOp)
-{
-    CODE(">");
-    CHECKMEM(0,0);
-    CHECKMPTR(1);
-}
-
-TEST(RightOp)
-{
-    CODE(">><");
-    CHECKMPTR(1);
-}
-
-TEST(Clear)
-{
-    CODE("+++++[-]");
-    CHECKMEM(0,0);
-}
-
-TEST(ClearAllCells)
-{
-    CODE(">+++++>++++>+++>++>+[[-]<]");
-    CHECKMEM(0,0);
-    CHECKMEM(1,0);
-    CHECKMEM(2,0);
-    CHECKMEM(3,0);
-    CHECKMEM(4,0);
-}
-
-TEST(Rewind)
-{
-    CODE(">>+>+[<]>");
-    CHECKMPTR(2);
-}
-
-TEST(FastForward)
-{
-    // 11101
-    CODE("+>+>+>>+<<<<[>]<");
-    CHECKMPTR(2);
-}
-
-TEST(DestructiveAdd)
-{
-    // 3 + 2, 5
-    CODE("+++>++<[->+<]");
-    CHECKMEM(0,0);
-    CHECKMEM(1,5);
-}
-
-TEST(NonDestructiveAdd)
-{
-    // 3 + 2, 5
-    CODE("+++>++<[->+>+<<]>>[-<<+>>]");
-    CHECKMEM(0,3);
-    CHECKMEM(1,5);
-}
-
-TEST(NonDestructiveCopy)
-{
-    // 4 <-> 2
-    CODE("++++>++<>[-]>[-]<<[->+>+<<]>>[-<<+>>]<<");
-    CHECKMEM(0,4);
-    CHECKMEM(1,4);
-}
-
-void runTests()
-{
-    int passed = 0;
-    int failed = 0;
-    int number = 0;
-
-    std::cout << std::endl;
-    std::cout << "---------- Executing Tests ---------- " << std::endl;
-    for ( int i = 0; i < GTests.size(); ++i )
-    {
-        // Run the test
-        GTests[i]->run();
-
-        if ( GTests[i]->failed() == false )
+        if ( actual == expected )
         {
-            std::cout << "PASSED: " << GTests[i]->name() << std::endl;
-            passed++;
+            return AssertionSuccess();
         }
         else
         {
-            std::cout << "FAILED: " << GTests[i]->name() << std::endl;
-            std::cout << " Line - " << GTests[i]->line() << std::endl;
-            std::cout << " Msg  - " << GTests[i]->reason() << std::endl;
-            failed++;
+            return AssertionFailure()
+                << "Value at memory address " << offset
+                << "was: "   << actual        << ". "
+                << "Expected: " << expected;
         }
-
-        // Clean up
-        delete GTests[i];
     }
 
-    //
-    // Summary
-    //
-    std::cout << std::endl;
-    std::cout << "Ran " << (passed+failed) << " tests with "
-              << failed << " failures and "
-              << passed << " passes." << std::endl;
-
-    if ( failed == 0 )
+    AssertionResult CheckIPtr( BFProgram& app, size_t expected )
     {
-        std::cout << "All tests passed!" << std::endl;
+        size_t actual = app.instructionOffset();
+
+        if ( expected == actual )
+        {
+            return AssertionSuccess();
+        }
+        else
+        {
+            return AssertionFailure()
+                << "Instruction pointer was: " << actual
+                << ". Expected: "              << expected;
+        }
     }
-    else
+
+    AssertionResult CheckMPtr( BFProgram& app, size_t expected )
     {
-        std::cout << "There were test failures :(" << std::endl;
+        size_t actual = app.memoryPointerOffset();
+
+        if ( expected == actual )
+        {
+            return AssertionSuccess();
+        }
+        else
+        {
+            return AssertionFailure()
+                << "Memory pointer was: " << actual
+                << ". Expected: "         << expected;
+        }
     }
+}
+
+using namespace testing;
+
+TEST(BrainfreezeLanguage, InstructionClass)
+{
+    Instruction instr( 3, 42 );
+
+    ASSERT_EQ( 3,  instr.opcode() );
+    ASSERT_EQ( 42, instr.param() );
+    ASSERT_TRUE( instr.isA(3) );
+
+    instr.setParam( 96 );
+
+    ASSERT_EQ( 3, instr.opcode() );
+    ASSERT_EQ( 96, instr.param() );
+    ASSERT_TRUE( instr.isA(3) );
+}
+
+TEST(BrainfreezeLanguage, Empty)
+{
+    BFProgram app( std::string( "" ) );
+    app.run();
+
+    CheckMem(app,0,0);
+    CheckIPtr(app,0);
+    CheckMPtr(app,0);
+}
+
+TEST(BrainfreezeLanguage, AddOp)
+{
+    BFProgram app( std::string("+") );
+    app.run();
+
+    CheckMem(app,0,1);
+}
+
+TEST(BrainfreezeLanguage, SubOp)
+{
+    BFProgram app( std::string("-") );
+    app.run();
+
+    CheckMem(app,0,-1);
+}
+
+TEST(BrainfreezeLanguage, LeftOp)
+{
+    BFProgram app( std::string(">") );
+    app.run();
+
+    CheckMem(app,0,0);
+    CheckMPtr(app,1);
+}
+
+TEST(BrainfreezeLanguage, RightOp)
+{
+    BFProgram app( std::string(">><") );
+    app.run();
+
+    CheckMPtr(app,1);
+}
+
+TEST(BrainfreezeLanguage, Clear)
+{
+    BFProgram app( std::string("+++++[-]") );
+    app.run();
+
+    CheckMem(app,0,0);
+}
+
+TEST(BrainfreezeLanguage, ClearAllCells)
+{
+    BFProgram app( std::string(">+++++>++++>+++>++>+[[-]<]") );
+    app.run();
+
+    CheckMem(app,0,0);
+    CheckMem(app,1,0);
+    CheckMem(app,2,0);
+    CheckMem(app,3,0);
+    CheckMem(app,4,0);
+}
+
+TEST(BrainfreezeLanguage, Rewind)
+{
+    BFProgram app( std::string(">>+>+[<]>") );
+    app.run();
+
+    CheckMPtr(app,2);
+}
+
+TEST(BrainfreezeLanguage, FastForward)
+{
+    // 11101
+    BFProgram app( std::string("+>+>+>>+<<<<[>]<") );
+    app.run();
+
+    CheckMPtr(app,2);
+}
+
+TEST(BrainfreezeLanguage, DestructiveAdd)
+{
+    // 3 + 2, 5
+    BFProgram app( std::string("+++>++<[->+<]") );
+    app.run();
+
+    CheckMem(app,0,0);
+    CheckMem(app,1,5);
+}
+
+TEST(BrainfreezeLanguage, NonDestructiveAdd)
+{
+    // 3 + 2, 5
+    BFProgram app( std::string("+++>++<[->+>+<<]>>[-<<+>>]") );
+    app.run();
+
+    CheckMem(app,0,3);
+    CheckMem(app,1,5);
+}
+
+TEST(BrainfreezeLanguage, NonDestructiveCopy)
+{
+    // 4 <-> 2
+    BFProgram app( std::string("++++>++<>[-]>[-]<<[->+>+<<]>>[-<<+>>]<<") );
+    app.run();
+
+    CheckMem(app,0,4);
+    CheckMem(app,1,4);
 }

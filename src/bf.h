@@ -15,6 +15,7 @@ class Instruction;
 class BFProgram;
 
 typedef int8_t Data;
+typedef int8_t BlockT;
 typedef std::vector<Instruction> Instructions;
 typedef std::vector<Data>        Memory;
 
