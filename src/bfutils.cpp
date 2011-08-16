@@ -5,8 +5,9 @@
  * Utility functions
  */
 #include <iostream>
-#include <vector>
 #include <string>
+#include <fstream>
+#include <sstream>
 #include <cassert>
 
 #include "bf.h"
@@ -20,6 +21,44 @@ const char CHR_WRITE   = '.';
 const char CHR_READ    = ',';
 const char CHR_JMP_FWD = '[';
 const char CHR_JMP_BAC = ']';
+
+/**
+ * Slurps a text file from disk into memory and stores it in the provided
+ * STL string instance.
+ *
+ * \param filename Path to the file that will be read
+ * \param filedata String instance that will be filled with the contents of
+ *                 the input file
+ * \return         True if the function was able to read the file in from disk,
+ *                 otherwise it will return false
+ */
+bool BF::loadFromDisk( const std::string& filename, std::string& filedata )
+{
+    std::ifstream infile;
+    std::string line;
+    std::stringstream sstream;
+
+    // Try to open the file
+    infile.open( filename.c_str() );
+
+    if ( infile.is_open() == false || infile.bad() )
+    {
+        perror("Failed to open file");
+        return false;
+    }
+
+    // gobble the contents of the file up
+    while ( std::getline( infile, line, '\n' ) )
+    {
+        sstream << line;
+    }
+
+    infile.close();
+
+    // all done woot
+    filedata = sstream.str();
+    return true;
+}
 
 bool BF::isInstruction( char c )
 {

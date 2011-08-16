@@ -8,51 +8,9 @@
 
 #include <iostream>
 #include <fstream>
-#include <sstream>
-
 #include <boost/program_options.hpp>
 
 namespace po = boost::program_options;
-
-/**
- * Slurps a text file from disk into memory and stores it in the provided
- * STL string instance.
- *
- * \param filename Path to the file that is to be loaded
- * \param filedata String instance that will be populated with the contents
- *                 of the text file
- * \returns        True if the function was able to read the file from disk,
- *                 otherwise it will return false
- */
-bool loadFromDisk( const std::string& filename,
-						 std::string& filedata )
-{
-	std::ifstream infile;
-	std::string   line;
-	std::stringstream str;
-	
-	// Try to open it
-	infile.open(filename.c_str());
-	
-	// Did it open?
-	if ( infile.is_open() == false || infile.bad()  )
-	{
-		perror("Failed to open file");
-		return false;
-	}
-	
-	// read the file in
-	while( std::getline( infile, line, '\n' ) )
-	{
-		str << line;
-	}
-	
-	infile.close();
-	
-	// Save the file data, and return
-	filedata = str.str();
-	return true;
-}
 
 /**
  * Summons forth helpful version information along with licensing and
@@ -163,7 +121,7 @@ int main( int argc, char * argv[] )
     std::string contents;
     std::string scriptfile = vm["script"].as<std::string>();
 
-    if ( false == loadFromDisk( scriptfile, contents ) )
+    if ( false == BF::loadFromDisk( scriptfile, contents ) )
     {
         std::cerr << "Could not open script: " << contents << std::endl;
         return 2;

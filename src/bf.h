@@ -44,6 +44,9 @@ void runTests();
 
 namespace BF
 {
+    // Slurps file into a STL string
+    bool loadFromDisk( const std::string& filepath, std::string& output );
+
     // Checks if a character is a valid BF instruction.
     bool isInstruction( char c );
 
