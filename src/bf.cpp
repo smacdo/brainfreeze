@@ -74,14 +74,14 @@ namespace BF
         }
     }
 
-    void write( const Data& d )
+    void write( const BlockT& d )
     {
         std::cout << static_cast<char>(d);
     }
 
-    Data read()         // fixme
+    BlockT read()         // fixme
     {
-        Data d;
+        BlockT d;
 
         if( std::cin >> d )
         {
@@ -103,7 +103,8 @@ BFProgram::BFProgram( const std::string& codestr )
       m_ip(),
       m_mp(),
       m_bCompiled(false),
-      m_bFinished(false)
+      m_bFinished(false),
+      m_bHasErrors(false)
 {
     m_instructions.clear();
     m_memory.resize(1024 * 32);
@@ -111,15 +112,19 @@ BFProgram::BFProgram( const std::string& codestr )
     m_mp = m_memory.begin();
 }
 
-void BFProgram::run()
+bool BFProgram::run()
 {
-    // Compile it first
-    if(! m_bCompiled )
+    // Make sure the program was compiled, and if it wasn't then compile it
+    if (! m_bCompiled )
     {
         compile();
     }
 
-    int counter = 0;
+    // Obviously we shouldn't be running if there were errors
+    if ( hasErrors() )
+    {
+        return false;
+    }
 
     // Run the application until we hit the terminating point
     //   XXX can we get rid of the null sentinel?
@@ -169,40 +174,10 @@ void BFProgram::runStep()
             {
                 break;
             }
-#ifdef USE_FAST_JUMPS
             else
             {
                 m_ip += m_ip->param();
             }
-#else
-            while( true )
-            {
-                m_ip++;
-
-                // don't go past the end
-                assert( m_ip != m_instructions.end() );
-                assert( m_ip->isA(OP_EOF) == false );
-                
-                // scope open/close?
-                if( m_ip->isA(OP_JMP_FWD) )
-                {
-                    // open...
-                    depth++;
-                }
-                else if ( m_ip->isA(OP_JMP_BAC) )
-                {
-                    // close
-                    if( depth == 0 )
-                    {
-                        break;
-                    }
-                    else
-                    {
-                        depth--;
-                    }
-                }
-            }
-#endif
 
             break;
 
@@ -212,46 +187,15 @@ void BFProgram::runStep()
             {
                 break;
             }
-#ifdef USE_FAST_JUMPS
             else
             {
                 m_ip -= m_ip->param();
             }
-#else
-            while( true )
-            {
-                m_ip--;
-
-                // don't go past the end
-                assert( m_ip != m_instructions.begin() );
-                
-                // scope open/close?
-                if( m_ip->isA(OP_JMP_BAC) )
-                {
-                    // open...
-                    depth++;
-                }
-                else if ( m_ip->isA(OP_JMP_FWD) )
-                {
-                    // close
-                    if( depth == 0 )
-                    {
-                        break;
-                    }
-                    else
-                    {
-                        depth--;
-                    }
-                }
-            }
-#endif
             break;
 
         default:
             assert("Unknown opcode");
     }
-
- //   std::cout << "" << *m_ip << ", " << (int) *m_mp << ", " << (int)m_memory[0] << " >\n";
 
     m_ip++;            // maybe integrate into switch
 }
@@ -264,7 +208,7 @@ void BFProgram::runStep()
  * Additionally, it performs jump optimizations so jumps no
  * longer need to be calculated on execution.
  */
-void BFProgram::compile()
+bool BFProgram::compile()
 {
     Instructions temp;
     Instruction  last = Instruction( OP_EOF, 0 );
@@ -313,7 +257,6 @@ void BFProgram::compile()
             //
             // Was the last character a repeat of +, -, >, <
             //
-#ifdef USE_COMBINE_INSTRUCTIONS
             if ( ( instr.opcode() == last.opcode() ) &&
                  ( instr.opcode() == OP_PTR_INC || 
                    instr.opcode() == OP_PTR_DEC ||
@@ -324,7 +267,6 @@ void BFProgram::compile()
                 temp[icount-1].setParam( temp[icount-1].param() + 1 );
             }
             else
-#endif
             {
                 // Add the instruction to the instruction stream
                 temp.push_back( instr );
@@ -343,7 +285,11 @@ void BFProgram::compile()
 
     // Verify the jump stack is empty. If not, then there is a
     // mismatched jump somewhere!
-    assert( jumps.size() == 0 && "Mismatched jump detected" );
+    if (! jumps.empty() )
+    {
+        raiseError( "Mismatched jump detected when compiling" );
+        return false;
+    }
 
     // Insert end of program instruction
     temp.push_back( Instruction( OP_EOF, 0 ) );
@@ -351,9 +297,11 @@ void BFProgram::compile()
     // Save it to m_instructions
     m_instructions.swap( temp );
     m_ip = m_instructions.begin();
+
+    return true;
 }
 
-Data BFProgram::valueAt( int offset ) const
+BlockT BFProgram::valueAt( std::size_t offset ) const
 {
     assert( offset >= 0 );
     assert( offset < m_memory.size() );
@@ -369,4 +317,24 @@ std::size_t BFProgram::instructionOffset() const
 std::size_t BFProgram::memoryPointerOffset() const
 {
     return m_mp - m_memory.begin();
+}
+
+/**
+ * Raises an error with the program, and halts execution
+ */
+void BFProgram::raiseError( const std::string& message )
+{
+    m_bHasErrors = true;
+
+    // Should we set the message text, or append to an already existing
+    // one?
+    if ( message.empty() )
+    {
+        m_errorText = message;
+    }
+    else
+    {
+        m_errorText += "\n";
+        m_errorText += message;
+    }
 }

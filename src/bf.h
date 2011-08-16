@@ -14,10 +14,9 @@
 class Instruction;
 class BFProgram;
 
-typedef int8_t Data;
 typedef int8_t BlockT;
 typedef std::vector<Instruction> Instructions;
-typedef std::vector<Data>        Memory;
+typedef std::vector<BlockT>      Memory;
 
 typedef Instructions::iterator       InstrItr;
 typedef Instructions::const_iterator InstrConstItr;
@@ -32,51 +31,70 @@ namespace BF
 
     Instruction convert( char c );
 
-    void write( const Data& d );
+    void write( const BlockT& d );
 
-    Data read();
+    BlockT read();
 }
 
 class BFProgram
 {
-    public:
-        BFProgram( const std::string& code );
+public:
+    BFProgram( const std::string& code );
 
-        void compile();
-        void run();
+    // Compiles the program into VM instructions
+    bool compile();
 
-        /**
-         * Retrieves the value stored at the specified offset in the
-         * program's memory.
-         *
-         * \param offset The memory offset
-         * \return       Value at that memory offset
-         */
-        Data valueAt( int offset ) const;
+    // Runs the program
+    bool run();
 
-        /**
-         * Retrieves the offset of the program's current instruction
-         * pointer
-         */
-        std::size_t instructionOffset() const;
+    // Retrieves the value stored at the memory offset
+    BlockT valueAt( std::size_t offset ) const;
 
-        /**
-         * Retrieves the offset of the program's current memory pointer
-         */
-        std::size_t memoryPointerOffset() const;
+    // Retrieves the current position of the instruction pointer
+    std::size_t instructionOffset() const;
 
-    private:
-        void runStep();
+    // Retrieves the current position of the memory pointer
+    std::size_t memoryPointerOffset() const;
 
-        std::string  m_codestr;
-        Instructions m_instructions;
-        Memory       m_memory;
+    // Checks if the program has any errors
+    bool hasErrors() const { return m_bHasErrors; }
 
-        InstrItr     m_ip;
-        MemoryItr    m_mp;
+    // Returns error text
+    std::string errorText() const { return m_errorText; }
 
-        bool         m_bCompiled;
-        bool         m_bFinished;
+    // Raises a fatal error
+    void raiseError( const std::string& errorText );
+
+private:
+    // Executes the next instruction in the instruction stream
+    void runStep();
+
+    // The program's source code
+    std::string  m_codestr;
+
+    // The transformed list of VM instructions
+    Instructions m_instructions;
+
+    // The program's memory
+    Memory       m_memory;
+
+    // Current instruction offset
+    InstrItr     m_ip;
+
+    // Current memory offset
+    MemoryItr    m_mp;
+
+    // Flag checking if code was compiled to VM bytecode
+    bool m_bCompiled;
+    
+    // Flag checking if execution has finished
+    bool m_bFinished;
+
+    // Flag specifying if there were fatal errors
+    bool m_bHasErrors;
+
+    // Contains error text
+    std::string m_errorText;
 };
 
 class Instruction
