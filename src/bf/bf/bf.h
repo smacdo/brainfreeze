@@ -60,6 +60,8 @@ namespace BF
     BlockT read();
 }
 
+// TODO: Namespace!
+
 class BFProgram
 {
 public:

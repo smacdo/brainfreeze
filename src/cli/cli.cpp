@@ -8,9 +8,6 @@
 
 #include <iostream>
 #include <fstream>
-#include <boost/program_options.hpp>
-
-namespace po = boost::program_options;
 
 /**
  * Summons forth helpful version information along with licensing and
@@ -36,11 +33,11 @@ void printVersionInfo()
  *
  * \param descr The program options that were configured for the command line
  */
-void printHelp( const po::options_description& descr )
+void printHelp()
 {
     std::cout
         << "Usage: brainfreeze [options] [scriptfile]" << std::endl
-        << descr << std::endl << std::endl
+        << "" << std::endl << std::endl
         << "Report bugs to: bugs@whitespaceconsideredharmful.com" << std::endl
         << "Website: http://whitespaceconsideredharmful.com/bf"
         << std::endl << std::endl;
@@ -54,7 +51,7 @@ int main( int argc, char * argv[] )
     unsigned int memoryBlockCount, memoryBlockSize, eolValue;
    
     // Command line only options
-    po::options_description generic("Generic Options");
+/*    po::options_description generic("Generic Options");
     generic.add_options()
         ("help",    "Show this help message and exit")
         ("script",   po::value<std::string>(),
@@ -142,7 +139,7 @@ int main( int argc, char * argv[] )
                   << app.errorText() << std::endl;
         return 4;
     }
-
+    */
     // It worked! woohoo
     return 0;
 }
