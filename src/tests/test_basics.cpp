@@ -2,22 +2,8 @@
 #include "testhelpers.h"
 #include <catch2/catch.hpp>
 
+using namespace Brainfreeze;
 using namespace Brainfreeze::TestHelpers;
-
-TEST_CASE("InstructionClass", "[bflang]")
-{
-    Instruction instr(3, 42);
-
-    REQUIRE(static_cast<uint8_t>(3) == instr.opcode());
-    REQUIRE(static_cast<uint32_t>(42) == instr.param());
-    REQUIRE(instr.isA(3));
-
-    instr.setParam(96);
-
-    REQUIRE(static_cast<uint8_t>(3) == instr.opcode());
-    REQUIRE(static_cast<uint32_t>(96) == instr.param());
-    REQUIRE(instr.isA(3));
-}
 
 TEST_CASE("no operations", "[ops]")
 {

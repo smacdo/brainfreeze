@@ -2,6 +2,7 @@
 #include <sstream>
 #include <string>
 
+using namespace Brainfreeze;
 using namespace Brainfreeze::TestHelpers;
 
 //=====================================================================================================================

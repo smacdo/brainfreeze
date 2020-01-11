@@ -1,9 +1,13 @@
 cmake_minimum_required(VERSION 3.2)
 project(brainfreeze-interpreter)
 
+# Fix for MSVC multiple warning levels. See: https://gitlab.kitware.com/cmake/cmake/issues/18317
+cmake_policy(SET CMP0092 NEW)
+
 set(SOURCES
 	bf.cpp
-	bfutils.cpp)
+	bfutils.cpp
+	instruction.cpp)
 
 add_library(brainfreeze-interpreter STATIC ${SOURCES})
 target_include_directories(brainfreeze-interpreter PUBLIC bf)

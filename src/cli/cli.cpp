@@ -1,13 +1,10 @@
-/**
- * Brainfreeze Language Interpreter
- * (c) 2011 Scott MacDonald. All rights reserved.
- *
- * Command line interface to the brainfreeze interpreter
- */
+// Copyright 2009-2020, Scott MacDonald.
 #include "bf.h"
 
 #include <iostream>
 #include <fstream>
+
+using namespace Brainfreeze;
 
 /**
  * Summons forth helpful version information along with licensing and
@@ -16,8 +13,8 @@
 void printVersionInfo()
 {
     std::cout
-        << "Brainfreeze Interpreter " << BRAINFREEZE_VERSION << std::endl
-        << "Copyright (C) 2011 Scott MacDonald." << std::endl
+        << "Brainfreeze Interpreter " << Brainfreeze::Version << std::endl
+        << "Copyright (C) 2009-2020 Scott MacDonald." << std::endl
         << "License GPLv2: GNU GPL version 2 "
         << "<http://www.gnu.org/licenses/gpl.html>" << std::endl
         << "This is free software: you are free to change it and redistribute "

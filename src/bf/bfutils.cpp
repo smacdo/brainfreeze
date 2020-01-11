@@ -1,9 +1,4 @@
-/**
- * Brainfreeze Language Interpreter
- * (c) 2011 Scott MacDonald. All rights reserved.
- *
- * Utility functions
- */
+// Copyright 2009-2020, Scott MacDonald.
 #include <iostream>
 #include <string>
 #include <fstream>
@@ -22,33 +17,26 @@ const char CHR_READ    = ',';
 const char CHR_JMP_FWD = '[';
 const char CHR_JMP_BAC = ']';
 
-/**
- * Slurps a text file from disk into memory and stores it in the provided
- * STL string instance.
- *
- * \param filename Path to the file that will be read
- * \param filedata String instance that will be filled with the contents of
- *                 the input file
- * \return         True if the function was able to read the file in from disk,
- *                 otherwise it will return false
- */
-bool BF::loadFromDisk( const std::string& filename, std::string& filedata )
+using namespace Brainfreeze;
+
+//---------------------------------------------------------------------------------------------------------------------
+bool Brainfreeze::loadFromDisk(const std::string& filename, std::string& filedata)
 {
     std::ifstream infile;
     std::string line;
     std::stringstream sstream;
 
     // Try to open the file
-    infile.open( filename.c_str() );
+    infile.open(filename.c_str());
 
-    if ( infile.is_open() == false || infile.bad() )
+    if (infile.is_open() == false || infile.bad())
     {
         perror("Failed to open file");
         return false;
     }
 
     // gobble the contents of the file up
-    while ( std::getline( infile, line, '\n' ) )
+    while (std::getline(infile, line, '\n'))
     {
         sstream << line;
     }
@@ -60,7 +48,8 @@ bool BF::loadFromDisk( const std::string& filename, std::string& filedata )
     return true;
 }
 
-bool BF::isInstruction( char c )
+//---------------------------------------------------------------------------------------------------------------------
+bool Brainfreeze::isInstruction( char c )
 {
     return c == CHR_PTR_INC || 
            c == CHR_PTR_DEC || 
@@ -72,41 +61,44 @@ bool BF::isInstruction( char c )
            c == CHR_JMP_BAC;
 }
 
-Instruction BF::convert( char c )
+//---------------------------------------------------------------------------------------------------------------------
+instruction_t Brainfreeze::convert(char c)
 {
-    switch( c )
+    switch (c)
     {
-        case CHR_PTR_INC:
-            return Instruction( OP_PTR_INC, 1 );
-        case CHR_PTR_DEC:
-            return Instruction( OP_PTR_DEC, 1 );
-        case CHR_MEM_INC:
-            return Instruction( OP_MEM_INC, 1 );
-        case CHR_MEM_DEC:
-            return Instruction( OP_MEM_DEC, 1 );
-        case CHR_READ:
-            return Instruction( OP_READ, 0 );
-        case CHR_WRITE:
-            return Instruction( OP_WRITE, 0 );
-        case CHR_JMP_FWD:
-            return Instruction( OP_JMP_FWD, 0 );
-        case CHR_JMP_BAC:
-            return Instruction( OP_JMP_BAC, 0 );
-        default:
-            return Instruction( OP_NOP, 0 );
+    case CHR_PTR_INC:
+        return instruction_t(OpcodeType::PtrInc, 1);
+    case CHR_PTR_DEC:
+        return instruction_t(OpcodeType::PtrDec, 1);
+    case CHR_MEM_INC:
+        return instruction_t(OpcodeType::MemInc, 1);
+    case CHR_MEM_DEC:
+        return instruction_t(OpcodeType::MemDec, 1);
+    case CHR_READ:
+        return instruction_t(OpcodeType::Read, 0);
+    case CHR_WRITE:
+        return instruction_t(OpcodeType::Write, 0);
+    case CHR_JMP_FWD:
+        return instruction_t(OpcodeType::JumpForward, 0);
+    case CHR_JMP_BAC:
+        return instruction_t(OpcodeType::JumpBack, 0);
+    default:
+        return instruction_t(OpcodeType::NoOperation, 0);
     }
 }
 
-void BF::write( const BlockT& d )
+//---------------------------------------------------------------------------------------------------------------------
+void Brainfreeze::write(const BlockT& d)
 {
     std::cout << static_cast<char>(d);
 }
 
-BlockT BF::read()
+//---------------------------------------------------------------------------------------------------------------------
+BlockT Brainfreeze::read()
 {
     BlockT d;
 
-    if( std::cin >> d )
+    if (std::cin >> d)
     {
         return d;
     }
@@ -117,4 +109,3 @@ BlockT BF::read()
 
     return d;
 }
-
