@@ -16,9 +16,10 @@ TEST_CASE("no operations", "[ops]")
     auto app = compile(std::string( "" ));
     app.run();
 
+
     REQUIRE_THAT(app, HasMemory(0, 0));
-    REQUIRE_THAT(app, InstructionPointerIs(0));
-    REQUIRE_THAT(app, MemoryPointerIs(0));
+    REQUIRE_THAT(app.instructionPointer(), InstructionPointerIs(0));
+    REQUIRE_THAT(app.memoryPointer(), MemoryPointerIs(0));
 }
 
 TEST_CASE("add op", "[ops]")
@@ -43,7 +44,7 @@ TEST_CASE("left op", "[ops]")
     app.run();
 
     REQUIRE_THAT(app, HasMemory(0, 0));
-    REQUIRE_THAT(app, MemoryPointerIs(1));
+    REQUIRE_THAT(app.memoryPointer(), MemoryPointerIs(1));
 }
 
 TEST_CASE("right op", "[ops]")
@@ -51,7 +52,7 @@ TEST_CASE("right op", "[ops]")
     auto app = compile( std::string(">><") );
     app.run();
 
-    REQUIRE_THAT(app, MemoryPointerIs(1));
+    REQUIRE_THAT(app.memoryPointer(), MemoryPointerIs(1));
 }
 
 TEST_CASE("clear", "[programs]")
@@ -79,7 +80,7 @@ TEST_CASE("rewind", "[programs]")
     auto app = compile( std::string(">>+>+[<]>") );
     app.run();
 
-    REQUIRE_THAT(app, MemoryPointerIs(2));
+    REQUIRE_THAT(app.memoryPointer(), MemoryPointerIs(2));
 }
 
 TEST_CASE("fast forward", "[programs]")
@@ -88,7 +89,7 @@ TEST_CASE("fast forward", "[programs]")
     auto app = compile( std::string("+>+>+>>+<<<<[>]<") );
     app.run();
 
-    REQUIRE_THAT(app, MemoryPointerIs(2));
+    REQUIRE_THAT(app.memoryPointer(), MemoryPointerIs(2));
 }
 
 TEST_CASE("destructive add", "[examples]")

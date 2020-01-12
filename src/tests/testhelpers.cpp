@@ -6,8 +6,8 @@ using namespace Brainfreeze;
 using namespace Brainfreeze::TestHelpers;
 
 //=====================================================================================================================
-MemoryMatcher::MemoryMatcher(size_t offset, Interpreter::byte_t expected)
-    : offset_(offset), expected_(expected)
+MemoryMatcher::MemoryMatcher(size_t address, Interpreter::byte_t expected)
+    : address_(address), expected_(expected)
 {
 }
 
@@ -15,7 +15,7 @@ MemoryMatcher::MemoryMatcher(size_t offset, Interpreter::byte_t expected)
 bool MemoryMatcher::match(const Interpreter& program) const
 {
     // TODO: Make sure offset is in range.
-    auto actual = program.memoryAt(offset_);
+    auto actual = program.memoryAt(address_);
 
     if (expected_ == actual)
     {
@@ -25,7 +25,7 @@ bool MemoryMatcher::match(const Interpreter& program) const
     {
         std::stringstream ss;
 
-        ss << "Expected memory at offset " << std::to_string(offset_) << " to be "
+        ss << "Expected memory at address " << std::to_string(address_) << " to be "
             << std::to_string(expected_) << " but was "
             << std::to_string(actual);
 
@@ -39,32 +39,27 @@ bool MemoryMatcher::match(const Interpreter& program) const
 std::string MemoryMatcher::describe() const
 {
     std::stringstream ss;
-    ss << "memory at offset " << std::to_string(offset_) << " is " << std::to_string(expected_);
+    ss << "memory at address " << std::to_string(address_) << " is " << std::to_string(expected_);
     return ss.str();
 }
 
 //=====================================================================================================================
-InstructionPointerMatcher::InstructionPointerMatcher(size_t expectedOffset)
-    : expectedOffset_(expectedOffset)
+InstructionPointerMatcher::InstructionPointerMatcher(std::size_t expectedAddress)
+    : expectedAddress_(expectedAddress)
 {
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-bool InstructionPointerMatcher::match(const Interpreter& program) const
+bool InstructionPointerMatcher::match(const Interpreter::instruction_pointer_t& actualIP) const
 {
-    // TODO: Make sure offset is in range.
-    auto actualOffset = program.instructionOffset();
-
-    if (expectedOffset_ == actualOffset)
+    if (expectedAddress_ == actualIP.address())
     {
         return true;
     }
     else
     {
         std::stringstream ss;
-
-        ss << "Expected instruction pointer to be " << std::to_string(expectedOffset_) << " but was "
-            << std::to_string(actualOffset);
+        ss << "Expected instruction pointer address to be " << expectedAddress_ << " but was " << actualIP;
 
         WARN(ss.str());
 
@@ -76,32 +71,27 @@ bool InstructionPointerMatcher::match(const Interpreter& program) const
 std::string InstructionPointerMatcher::describe() const
 {
     std::stringstream ss;
-    ss << "instruction pointer is " << std::to_string(expectedOffset_);
+    ss << "instruction pointer address is " << expectedAddress_;
     return ss.str();
 }
 
 //=====================================================================================================================
-MemoryPointerMatcher::MemoryPointerMatcher(size_t expectedOffset)
-    : expectedOffset_(expectedOffset)
+MemoryPointerMatcher::MemoryPointerMatcher(std::size_t expectedAddress)
+    : expectedAddress_(expectedAddress)
 {
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-bool MemoryPointerMatcher::match(const Interpreter& program) const
+bool MemoryPointerMatcher::match(const Interpreter::memory_pointer_t& actualMP) const
 {
-    // TODO: Make sure offset is in range.
-    auto actualOffset = program.memoryPointerOffset();
-
-    if (expectedOffset_ == actualOffset)
+    if (expectedAddress_ == actualMP.address())
     {
         return true;
     }
     else
     {
         std::stringstream ss;
-
-        ss << "Expected memory pointer to be " << std::to_string(expectedOffset_) << " but was "
-            << std::to_string(actualOffset);
+        ss << "Expected memory pointer address to be " << expectedAddress_ << " but was " << actualMP;
 
         WARN(ss.str());
 
@@ -113,7 +103,7 @@ bool MemoryPointerMatcher::match(const Interpreter& program) const
 std::string MemoryPointerMatcher::describe() const
 {
     std::stringstream ss;
-    ss << "memory pointer is " << std::to_string(expectedOffset_);
+    ss << "memory pointer address is " << expectedAddress_;
     return ss.str();
 }
 
@@ -124,13 +114,27 @@ MemoryMatcher Brainfreeze::TestHelpers::HasMemory(size_t offset, Interpreter::by
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-InstructionPointerMatcher Brainfreeze::TestHelpers::InstructionPointerIs(size_t expectedOffset)
+InstructionPointerMatcher Brainfreeze::TestHelpers::InstructionPointerIs(std::size_t expectedAddress)
 {
-    return InstructionPointerMatcher(expectedOffset);
+    return InstructionPointerMatcher(expectedAddress);
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-MemoryPointerMatcher Brainfreeze::TestHelpers::MemoryPointerIs(size_t expectedOffset)
+MemoryPointerMatcher Brainfreeze::TestHelpers::MemoryPointerIs(std::size_t expectedAddress)
 {
-    return MemoryPointerMatcher(expectedOffset);
+    return MemoryPointerMatcher(expectedAddress);
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+std::ostream& Brainfreeze::TestHelpers::operator <<(std::ostream& os, Interpreter::instruction_pointer_t ip)
+{
+    os << std::to_string(ip.address());
+    return os;
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+std::ostream& Brainfreeze::TestHelpers::operator <<(std::ostream& os, Interpreter::memory_pointer_t mp)
+{
+    os << std::to_string(mp.address());
+    return os;
 }

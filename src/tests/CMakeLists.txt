@@ -4,6 +4,7 @@ project(brainfreeze-tests)
 set(SOURCES
 	testrunner.cpp
 	testhelpers.cpp
+	testhelpers.h
 )
 
 set(TEST_FILES

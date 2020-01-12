@@ -32,6 +32,61 @@ namespace Brainfreeze
     {
     public:
         using byte_t = int8_t;
+        using instruction_list_t = std::vector<instruction_t>;
+        using memory_buffer_t = std::vector<byte_t>;
+
+        /** Opaque instruction pointer type. */
+        struct instruction_pointer_t
+        {
+            explicit instruction_pointer_t(
+                    instruction_list_t::const_iterator begin,
+                    instruction_list_t::const_iterator current)
+                : begin_(begin), current_(current)
+            {
+            }
+
+            bool operator ==(const instruction_pointer_t& other) const
+            {
+                return begin_ == other.begin_ && current_ == other.current_;
+            }
+
+            std::size_t address() const
+            {
+                return current_ - begin_;
+            }
+            
+            instruction_list_t::const_iterator begin_;
+            instruction_list_t::const_iterator current_;
+        };
+
+        /** Opaque memory pointer type. */
+        struct memory_pointer_t
+        {
+            explicit memory_pointer_t(
+                    memory_buffer_t::const_iterator begin,
+                    memory_buffer_t::const_iterator current)
+                : begin_(begin), current_(current)
+            {
+            }
+
+            bool operator ==(const memory_pointer_t& other) const
+            {
+                return begin_ == other.begin_ && current_ == other.current_;
+            }
+
+            std::size_t address() const
+            {
+                return current_ - begin_;
+            }
+
+            byte_t data() const
+            {
+                return *current_;
+            }
+
+            memory_buffer_t::const_iterator begin_;
+            memory_buffer_t::const_iterator current_;
+        };
 
         enum class RunState
         {
@@ -82,10 +137,10 @@ namespace Brainfreeze
         byte_t memoryAt(std::size_t address) const;
 
         /** Get the current instruction pointer. */
-        std::size_t instructionOffset() const;
+        instruction_pointer_t instructionPointer() const;
 
         /** Get the current memory pointer. */
-        std::size_t memoryPointerOffset() const;
+        memory_pointer_t memoryPointer() const;
 
     private:
         /** Prepares the interpreter before execution begins. */
@@ -95,14 +150,11 @@ namespace Brainfreeze
         RunState runStep();
 
     private:
-        std::vector<instruction_t> instructions_;
-        std::vector<byte_t> memory_;
+        instruction_list_t instructions_;
+        memory_buffer_t memory_;
 
-        // TODO: Make these be size_t offsets
-        std::vector<instruction_t>::const_iterator ip_;
-
-        // Current memory offset
-        std::vector<byte_t>::iterator mp_;
+        instruction_list_t::const_iterator ip_;
+        memory_buffer_t::iterator mp_;
 
         RunState state_ = RunState::NotStarted;
 

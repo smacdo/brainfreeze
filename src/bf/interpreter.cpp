@@ -143,14 +143,15 @@ Interpreter::byte_t Interpreter::memoryAt(std::size_t offset) const
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-std::size_t Interpreter::instructionOffset() const
+Interpreter::instruction_pointer_t Interpreter::instructionPointer() const
 {
-    return ip_ - instructions_.begin();
+    // TODO: Remove
+    // ip_ - instructions_.begin()
+    return instruction_pointer_t(instructions_.begin(), ip_);
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-std::size_t Interpreter::memoryPointerOffset() const
+Interpreter::memory_pointer_t Interpreter::memoryPointer() const
 {
-    return mp_ - memory_.begin();
+    return memory_pointer_t(memory_.begin(), mp_);
 }
-
