@@ -6,10 +6,11 @@ cmake_policy(SET CMP0092 NEW)
 
 set(SOURCES
 	bf.cpp
-	bfutils.cpp
 	compiler.cpp
+	helpers.cpp
 	instruction.cpp
 	interpreter.cpp
+	readwrite.cpp
 	bf/bf.h)
 
 add_library(brainfreeze-interpreter STATIC ${SOURCES})

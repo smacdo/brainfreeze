@@ -10,9 +10,7 @@
 namespace Brainfreeze
 {
     constexpr char* Version = "0.2";
-
     struct instruction_t;
-    class Interpreter;
 
     /** Defines what operation an instruction should perform. */
     enum class OpcodeType : uint8_t
@@ -59,7 +57,17 @@ namespace Brainfreeze
         /** Set the size in bytes for a memory cell. */
         void setCellSize(size_t bytes);
 
-        // TODO: Get/set read/write functions.
+        /** Get the read function used by the interpreter. */
+        std::function<byte_t(void)> readFunction() const { return readFunction_; }
+
+        /** Set the read function used by the interpreter. */
+        void setReadFunction(std::function<byte_t(void)> func) { readFunction_ = std::move(func); }
+
+        /** Get the write function used by the interprter. */
+        std::function<void(byte_t)> writeFunction() const { return writeFunction_; }
+
+        /** Set the write function used by the interpreter. */
+        void setWriteFunction(std::function<void(byte_t)> func) { writeFunction_ = std::move(func); }
 
     public:
         /** Execute the Brainfreeze program and do not return until execution has finished. */
@@ -103,13 +111,6 @@ namespace Brainfreeze
 
         std::function<void(byte_t)> writeFunction_;
         std::function<byte_t(void)> readFunction_;
-
-    };
-
-    /** The current state of a running Brainfreeze program while being run by the interpreter. */
-    struct program_state_t
-    {
-
     };
 
     /** Compiles Brainfreeze code into executable instructions. */
@@ -167,24 +168,25 @@ namespace Brainfreeze
         uint32_t data_ = 0;
     };
 
-    // TODO: A bunch of these should be moved into an internal header since they are private helpers.
+    namespace Helpers
+    {
+        /**
+         * Read a text file containing Brainfreeze code from disk, compile it and return an interpreter instance
+         * capable of executing the code. Throws an exception if something goes wrong while trying to load or compile
+         * the code.
+         *
+         * \param    filename Path to the file that will be read.
+         * \returns  New interpreter that is ready to run the loaded code.
+         */
+        std::unique_ptr<Interpreter> LoadFromDisk(const std::string& filepath);
+    }
 
-    /**
-     * Slurps a text file from disk into memory and stores it in the provided STL string instance.
-     *
-     * \param filename Path to the file that will be read
-     * \param filedata String instance that will be filled with the contents of
-     *                 the input file
-     * \return         True if the function was able to read the file in from disk,
-     *                 otherwise it will return false
-     */
-    bool loadFromDisk(const std::string& filepath, std::string& output);
+    namespace Details
+    {
+        /** Default write implementation: writes a byte to standard output. */
+        void Write(Interpreter::byte_t d);
 
-    // Writes output
-    // TODO: Make this configurable size.
-    void write(Interpreter::byte_t d);
-
-    // Reads input.
-    // TODO: Make this configurable size.
-    Interpreter::byte_t read();
+        /** Default read implementation: reads a byte from standard input. */
+        Interpreter::byte_t Read();
+    }
 }

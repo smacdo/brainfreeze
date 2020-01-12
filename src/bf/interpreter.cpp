@@ -9,8 +9,8 @@ using namespace Brainfreeze;
 //---------------------------------------------------------------------------------------------------------------------
 Interpreter::Interpreter(std::vector<instruction_t> instructions)
     : instructions_(std::move(instructions)),
-      writeFunction_(Brainfreeze::write),
-      readFunction_(Brainfreeze::read)
+      writeFunction_(Brainfreeze::Details::Write),
+      readFunction_(Brainfreeze::Details::Read)
 {
 }
 
@@ -130,7 +130,8 @@ Interpreter::RunState Interpreter::runStep()
         throw std::runtime_error("unknown instruction opcode");
     }
 
-    ip_++;            // TODO: maybe integrate into switch
+    // Move to the next instruction and then return the running state of the interpreter.
+    ip_++;
     return state_;
 }
 
