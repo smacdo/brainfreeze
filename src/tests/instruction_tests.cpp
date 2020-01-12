@@ -98,3 +98,5 @@ TEST_CASE("can test an instruction to see what opcode it has", "[instructions]")
     REQUIRE_FALSE(i1.isA(OpcodeType::EndOfStream));
     REQUIRE_FALSE(i1.isA(OpcodeType::NoOperation));
 }
+
+// TODO: Test instruction overflow / underflow.

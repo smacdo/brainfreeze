@@ -7,7 +7,10 @@ cmake_policy(SET CMP0092 NEW)
 set(SOURCES
 	bf.cpp
 	bfutils.cpp
-	instruction.cpp)
+	compiler.cpp
+	instruction.cpp
+	interpreter.cpp
+	bf/bf.h)
 
 add_library(brainfreeze-interpreter STATIC ${SOURCES})
 target_include_directories(brainfreeze-interpreter PUBLIC bf)

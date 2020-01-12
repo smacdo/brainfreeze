@@ -5,9 +5,15 @@
 using namespace Brainfreeze;
 using namespace Brainfreeze::TestHelpers;
 
+Interpreter compile(const std::string& code)
+{
+    Compiler compiler;
+    return Interpreter(compiler.compile(code));
+}
+
 TEST_CASE("no operations", "[ops]")
 {
-    BFProgram app(std::string( "" ));
+    auto app = compile(std::string( "" ));
     app.run();
 
     REQUIRE_THAT(app, HasMemory(0, 0));
@@ -17,7 +23,7 @@ TEST_CASE("no operations", "[ops]")
 
 TEST_CASE("add op", "[ops]")
 {
-    BFProgram app( std::string("+") );
+    auto app = compile( std::string("+") );
     app.run();
 
     REQUIRE_THAT(app, HasMemory(0, 1));
@@ -25,7 +31,7 @@ TEST_CASE("add op", "[ops]")
 
 TEST_CASE("sub op", "[ops]")
 {
-    BFProgram app( std::string("-") );
+    auto app = compile( std::string("-") );
     app.run();
 
     REQUIRE_THAT(app, HasMemory(0, -1));
@@ -33,7 +39,7 @@ TEST_CASE("sub op", "[ops]")
 
 TEST_CASE("left op", "[ops]")
 {
-    BFProgram app( std::string(">") );
+    auto app = compile( std::string(">") );
     app.run();
 
     REQUIRE_THAT(app, HasMemory(0, 0));
@@ -42,7 +48,7 @@ TEST_CASE("left op", "[ops]")
 
 TEST_CASE("right op", "[ops]")
 {
-    BFProgram app( std::string(">><") );
+    auto app = compile( std::string(">><") );
     app.run();
 
     REQUIRE_THAT(app, MemoryPointerIs(1));
@@ -50,7 +56,7 @@ TEST_CASE("right op", "[ops]")
 
 TEST_CASE("clear", "[programs]")
 {
-    BFProgram app( std::string("+++++[-]") );
+    auto app = compile( std::string("+++++[-]") );
     app.run();
 
     REQUIRE_THAT(app, HasMemory(0, 0));
@@ -58,7 +64,7 @@ TEST_CASE("clear", "[programs]")
 
 TEST_CASE("clear all cells", "[programs]")
 {
-    BFProgram app( std::string(">+++++>++++>+++>++>+[[-]<]") );
+    auto app = compile( std::string(">+++++>++++>+++>++>+[[-]<]") );
     app.run();
 
     REQUIRE_THAT(app, HasMemory(0, 0));
@@ -70,7 +76,7 @@ TEST_CASE("clear all cells", "[programs]")
 
 TEST_CASE("rewind", "[programs]")
 {
-    BFProgram app( std::string(">>+>+[<]>") );
+    auto app = compile( std::string(">>+>+[<]>") );
     app.run();
 
     REQUIRE_THAT(app, MemoryPointerIs(2));
@@ -79,7 +85,7 @@ TEST_CASE("rewind", "[programs]")
 TEST_CASE("fast forward", "[programs]")
 {
     // 11101
-    BFProgram app( std::string("+>+>+>>+<<<<[>]<") );
+    auto app = compile( std::string("+>+>+>>+<<<<[>]<") );
     app.run();
 
     REQUIRE_THAT(app, MemoryPointerIs(2));
@@ -88,7 +94,7 @@ TEST_CASE("fast forward", "[programs]")
 TEST_CASE("destructive add", "[examples]")
 {
     // 3 + 2, 5
-    BFProgram app( std::string("+++>++<[->+<]") );
+    auto app = compile( std::string("+++>++<[->+<]") );
     app.run();
 
     REQUIRE_THAT(app, HasMemory(0, 0));
@@ -98,7 +104,7 @@ TEST_CASE("destructive add", "[examples]")
 TEST_CASE("nondestructive add", "[examples]")
 {
     // 3 + 2, 5
-    BFProgram app( std::string("+++>++<[->+>+<<]>>[-<<+>>]") );
+    auto app = compile( std::string("+++>++<[->+>+<<]>>[-<<+>>]") );
     app.run();
 
     REQUIRE_THAT(app, HasMemory(0, 3));
@@ -108,7 +114,7 @@ TEST_CASE("nondestructive add", "[examples]")
 TEST_CASE("nondestructive copy", "[examples]")
 {
     // 4 <-> 2
-    BFProgram app( std::string("++++>++<>[-]>[-]<<[->+>+<<]>>[-<<+>>]<<") );
+    auto app = compile( std::string("++++>++<>[-]>[-]<<[->+>+<<]>>[-<<+>>]<<") );
     app.run();
 
     REQUIRE_THAT(app, HasMemory(0, 4));

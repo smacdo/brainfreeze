@@ -40,12 +40,12 @@ void printHelp()
         << std::endl << std::endl;
 }
 
-int main( int argc, char * argv[] )
+int main( int, char*[] )
 {
     //
     // Create our list of allowable arguments
     //
-    unsigned int memoryBlockCount, memoryBlockSize, eolValue;
+    //unsigned int memoryBlockCount, memoryBlockSize, eolValue;
    
     // Command line only options
 /*    po::options_description generic("Generic Options");

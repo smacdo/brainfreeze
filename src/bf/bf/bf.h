@@ -1,26 +1,18 @@
 // Copyright 2009-2020, Scott MacDonald.
 #pragma once
 
-#include <stdint.h>
+#include <cstdint>
 #include <vector>
+#include <memory>
 #include <string>
+#include <functional>
 
 namespace Brainfreeze
 {
     constexpr char* Version = "0.2";
 
     struct instruction_t;
-    class BFProgram;
-
-    typedef int8_t BlockT;
-    typedef int8_t OpcodeT;
-    typedef std::vector<instruction_t> Instructions;        // TODO: Get rid of all these
-    typedef std::vector<BlockT>      Memory;
-
-    typedef Instructions::iterator       InstrItr;
-    typedef Instructions::const_iterator InstrConstItr;
-    typedef Memory::iterator             MemoryItr;
-    typedef Memory::const_iterator       MemoryConstItr;
+    class Interpreter;
 
     /** Defines what operation an instruction should perform. */
     enum class OpcodeType : uint8_t
@@ -37,91 +29,139 @@ namespace Brainfreeze
         JumpBack = 10
     };
 
-    class BFProgram
+    /** The brainfreeze interpreter. */
+    class Interpreter
     {
     public:
-        BFProgram(const std::string& code);
+        using byte_t = int8_t;
 
-        // Compiles the program into VM instructions
-        bool compile();
+        enum class RunState
+        {
+            NotStarted,
+            Running,
+            Finished
+        };
 
-        // Runs the program
-        bool run();
+    public:
+        /** Construct interpreter with code to be run. */
+        Interpreter(std::vector<instruction_t> instructions);
 
-        // Retrieves the value stored at the memory offset
-        BlockT valueAt(std::size_t offset) const;
+    public:
+        /** Get the number of memory cells to allocate for execution. */
+        std::size_t cellCount() const noexcept { return cellCount_; }
 
-        // Retrieves the current position of the instruction pointer
+        /** Set the number of memory cells to allocate for execution. */
+        void setCellCount(size_t count);
+
+        /** Get the size in bytes for a memory cell. */
+        std::size_t cellSize() const noexcept { return cellSize_; }
+
+        /** Set the size in bytes for a memory cell. */
+        void setCellSize(size_t bytes);
+
+        // TODO: Get/set read/write functions.
+
+    public:
+        /** Execute the Brainfreeze program and do not return until execution has finished. */
+        void run();
+
+        /**
+         * Get the value stored at the requested memory address.
+         *
+         * \param   The memory offset to fetch
+         * \returns The value that was stored in that memory block
+         */
+        byte_t memoryAt(std::size_t address) const;
+
+        /** Get the current instruction pointer. */
         std::size_t instructionOffset() const;
 
-        // Retrieves the current position of the memory pointer
+        /** Get the current memory pointer. */
         std::size_t memoryPointerOffset() const;
 
-        // Checks if the program has any errors
-        bool hasErrors() const { return m_bHasErrors; }
+    private:
+        /** Prepares the interpreter before execution begins. */
+        void start();
 
-        // Returns error text
-        std::string errorText() const { return m_errorText; }
-
-        // Raises a fatal error
-        void raiseError(const std::string& errorText);
+        /** Execute the next instruction and return the running state after executing the one step. */
+        RunState runStep();
 
     private:
-        // Executes the next instruction in the instruction stream
-        void runStep();
+        std::vector<instruction_t> instructions_;
+        std::vector<byte_t> memory_;
 
-        // The program's source code
-        std::string  m_codestr;
-
-        // The transformed list of VM instructions
-        Instructions m_instructions;
-
-        // The program's memory
-        Memory       m_memory;
-
-        // Current instruction offset
-        InstrItr     m_ip;
+        // TODO: Make these be size_t offsets
+        std::vector<instruction_t>::const_iterator ip_;
 
         // Current memory offset
-        MemoryItr    m_mp;
+        std::vector<byte_t>::iterator mp_;
 
-        // Flag checking if code was compiled to VM bytecode
-        bool m_bCompiled;
+        RunState state_ = RunState::NotStarted;
 
-        // Flag checking if execution has finished
-        bool m_bFinished;
+        std::size_t cellCount_ = 30000;
+        std::size_t cellSize_ = 1;
 
-        // Flag specifying if there were fatal errors
-        bool m_bHasErrors;
+        std::function<void(byte_t)> writeFunction_;
+        std::function<byte_t(void)> readFunction_;
 
-        // Contains error text
-        std::string m_errorText;
     };
 
-    /** Defines a brainfreeze instruction to be performed. */
+    /** The current state of a running Brainfreeze program while being run by the interpreter. */
+    struct program_state_t
+    {
+
+    };
+
+    /** Compiles Brainfreeze code into executable instructions. */
+    class Compiler
+    {
+    public:
+        /** Convert Brainfreeze code into an exeuctable Brainfreeze program. */
+        std::vector<instruction_t> compile(std::string_view programtext) const;
+
+        /** Get if a character is a valid brainfreeze instruction. */
+        static bool isInstruction(char c) noexcept;
+
+        /** Get the compiled instruction form of a brainfreeze character. */
+        static instruction_t asInstruction(char c);
+
+        /** Get if an instruction can be merged together for optimization. TODO: move this. */
+        static bool isMergable(const instruction_t& instr) noexcept;
+    };
+
+    /** Defines an executable Brainfreeze instruction. */
     struct instruction_t
     {
     public:
-        /** Default constructor. */
+        using param_t = int16_t;
+
+    public:
+        /** Default constructor, defaults to a NOP instruction. */
         instruction_t() noexcept;
 
         /** Constructor that takes an opcode. */
         explicit instruction_t(OpcodeType op) noexcept;
 
-        /** Constructor that takes an opcode and optional argument. */
-        instruction_t(OpcodeType op, int16_t arg) noexcept;
+        /** Constructor that takes an opcode and optional parameter value. */
+        instruction_t(OpcodeType op, param_t value) noexcept;
 
         /** Get the opcode encoded in this instruction. */
         OpcodeType opcode() const noexcept;
 
-        /** Get the parameter value encoded in this instruction. */
-        int16_t param() const noexcept;
-
-        /** Set the parameter value encoded in this instruction. */
-        void setParam(int16_t p) noexcept;
-
         /** Check if this instruction has an opcode of the given type. */
         bool isA(OpcodeType op) const noexcept;
+
+        /** Get the parameter value encoded in this instruction. */
+        param_t param() const noexcept;
+
+        /** Set the parameter value encoded in this instruction. */
+        void setParam(param_t value) noexcept;
+
+        /**
+         * Increment parameter by the given amount.
+         * An exception is thrown if the new value is too large or too small to be stored.
+         */
+        void incrementParam(param_t amount);
 
     private:
         uint32_t data_ = 0;
@@ -140,15 +180,11 @@ namespace Brainfreeze
      */
     bool loadFromDisk(const std::string& filepath, std::string& output);
 
-    // Checks if a character is a valid BF instruction.
-    bool isInstruction(char c);
-
-    // Takes a character and returns the equivilant Brainfreeze VM instruction
-    instruction_t convert(char c);
-
     // Writes output
-    void write(const BlockT& d);
+    // TODO: Make this configurable size.
+    void write(Interpreter::byte_t d);
 
-    // Reads input
-    BlockT read();
+    // Reads input.
+    // TODO: Make this configurable size.
+    Interpreter::byte_t read();
 }

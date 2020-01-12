@@ -6,16 +6,16 @@ using namespace Brainfreeze;
 using namespace Brainfreeze::TestHelpers;
 
 //=====================================================================================================================
-MemoryMatcher::MemoryMatcher(size_t offset, BlockT expected)
+MemoryMatcher::MemoryMatcher(size_t offset, Interpreter::byte_t expected)
     : offset_(offset), expected_(expected)
 {
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-bool MemoryMatcher::match(const BFProgram& program) const
+bool MemoryMatcher::match(const Interpreter& program) const
 {
     // TODO: Make sure offset is in range.
-    auto actual = program.valueAt(offset_);
+    auto actual = program.memoryAt(offset_);
 
     if (expected_ == actual)
     {
@@ -50,7 +50,7 @@ InstructionPointerMatcher::InstructionPointerMatcher(size_t expectedOffset)
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-bool InstructionPointerMatcher::match(const BFProgram& program) const
+bool InstructionPointerMatcher::match(const Interpreter& program) const
 {
     // TODO: Make sure offset is in range.
     auto actualOffset = program.instructionOffset();
@@ -87,7 +87,7 @@ MemoryPointerMatcher::MemoryPointerMatcher(size_t expectedOffset)
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-bool MemoryPointerMatcher::match(const BFProgram& program) const
+bool MemoryPointerMatcher::match(const Interpreter& program) const
 {
     // TODO: Make sure offset is in range.
     auto actualOffset = program.memoryPointerOffset();
@@ -118,7 +118,7 @@ std::string MemoryPointerMatcher::describe() const
 }
 
 //=====================================================================================================================
-MemoryMatcher Brainfreeze::TestHelpers::HasMemory(size_t offset, BlockT expected)
+MemoryMatcher Brainfreeze::TestHelpers::HasMemory(size_t offset, Interpreter::byte_t expected)
 {
     return MemoryMatcher(offset, expected);
 }
