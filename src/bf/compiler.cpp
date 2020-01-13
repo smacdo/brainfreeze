@@ -12,7 +12,6 @@ using namespace Brainfreeze::Helpers;
 //---------------------------------------------------------------------------------------------------------------------
 std::vector<instruction_t> Compiler::compile(std::string_view programtext) const
 {
-    // TODO: Move the optimizations into an optimizer pass.
     std::vector<instruction_t> instructions;
     instructions.reserve(programtext.size());      // Over-reserve for speed, and release extra at the end of compile.
 
@@ -36,9 +35,14 @@ std::vector<instruction_t> Compiler::compile(std::string_view programtext) const
 
         // Handle jump instructions specially. Jump forwards need to have their position recorded so that when the
         // matching backward jump is found both jumps can have their offset written into them for optimization.
-        // TODO: Move this code into an optimization pass.
         if (instr.isA(OpcodeType::JumpForward))
         {
+            // If jump optimization is enabled upgrade this instruction to a fast jump forward.
+            if (isPrecalculateJumpOffsetsEnabled())
+            {
+                instr.setOpcode(OpcodeType::FastJumpForward);
+            }
+
             // Record the jump forward position until the matching jumping backward instruction is located.
             jumps.push(nextIndex);
         }
@@ -47,34 +51,55 @@ std::vector<instruction_t> Compiler::compile(std::string_view programtext) const
             // Backward jump found. Pop the top jump marker off the stack which is the matching forwrad jump target.
             // Write the offset of the jump into both the forward and backward jump instructions.
 
-            // Get the offset of the matching forward [ jump.
-            auto forwardJumpOffset = jumps.top();
-            jumps.pop();
-
-            auto distance = nextIndex - forwardJumpOffset;
-            assert(distance > 0);
-
-            // Verify the jump distance is small enough to fit in the instruction parameter.
-            // TODO: How should we handle jump targets that are too big? Is this even a problem?
-            if (distance > std::numeric_limits<instruction_t::param_t>::max())
+            // Throw an exception if there is not a matching forward [ jump.
+            if (jumps.empty())
             {
-                // TODO: Should the size be included in the message?
-                throw std::runtime_error("Jump target to large to fit in instruction");
+                // TODO: Show offset of the offending character.
+                throw std::runtime_error("Unbalanced jump, expected a [ before this ]");
             }
 
-            // Store the offset in the [ instruction.
-            instructions[forwardJumpOffset].setParam(static_cast<instruction_t::param_t>(distance));
+            // If the jump optimization is enabled upgrade this instruction to a fast jump backward. Search for the
+            // corresponding forward jump instruction and write the offset into both. If the optimization is disabled
+            // then leave the jump instruction alone.
+            if (isPrecalculateJumpOffsetsEnabled())
+            {
+                // Upgrade to fast jump.
+                instr.setOpcode(OpcodeType::FastJumpBack);
 
-            // Store the offset in the current ] instruction.
-            instr.setParam(static_cast<instruction_t::param_t>(distance));
+                // Get the offset of the matching forward [ jump.
+                auto forwardJumpOffset = jumps.top();
+                jumps.pop();
+
+                auto distance = nextIndex - forwardJumpOffset;
+                assert(distance > 0);
+
+                // Verify the jump distance is small enough to fit in the instruction parameter.
+                // TODO: How should we handle jump targets that are too big? Is this even a problem?
+                if (distance > std::numeric_limits<instruction_t::param_t>::max())
+                {
+                    // TODO: Should the size be included in the message?
+                    throw std::runtime_error("Jump target to large to fit in instruction");
+                }
+
+                // Store the offset in the [ instruction.
+                instructions[forwardJumpOffset].setParam(static_cast<instruction_t::param_t>(distance));
+
+                // Store the offset in the current ] instruction.
+                instr.setParam(static_cast<instruction_t::param_t>(distance));
+            }
+            else
+            {
+                // Make sure the corresponding forward jump offset is removed from the stack even if the optimiation
+                // isn't being used. (The stack is still tracking if there are unbalanced jumps).
+                jumps.pop();
+            }
         }
 
         // Is this instruction a repeat of the previous instruction? If it is a repeating instruction that supports
         // merging (like increment/decrement) then merge it into the last instruction and increase the parameter
         // count.
-        //
-        // TODO: This is an optimization step that should be moved into an optimizer.
-        if (isMergable(instr) &&                                    // is this instruction mergable?
+        if (mergeInstructions_ &&                                   // is the merge instruction optimization enabled?
+            isMergable(instr) &&                                    // is this instruction mergable?
             instructions.size() > 0 &&                              // are there any instructions already stored?
             instr.opcode() == instructions[nextIndex - 1].opcode()) // does this match previous instruction?
         {
@@ -91,8 +116,8 @@ std::vector<instruction_t> Compiler::compile(std::string_view programtext) const
     // Verify the jump stack is empty. If not, then there is an unmatched jump somewhere!
     if (!jumps.empty())
     {
-        // TODO: Maybe hint?
-        throw std::runtime_error("Unmatched jump target found when compiling");
+        // TODO: Show offset of the offending character.
+        throw std::runtime_error("Unbalanced jump, expected a ] before program termination");
     }
 
     // Insert end of program instruction.

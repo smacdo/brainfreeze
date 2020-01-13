@@ -132,3 +132,14 @@ TEST_CASE("increment will wrap if decremented past min", "[instructions]")
         i.incrementParam(-1);
         }(), std::underflow_error);
 }
+
+TEST_CASE("an instruction opcode can be changed after construction", "[instructions]")
+{
+    instruction_t instr(OpcodeType::NoOperation, 32767);
+    REQUIRE(32767 == instr.param());
+    REQUIRE(OpcodeType::NoOperation == instr.opcode());
+
+    instr.setOpcode(OpcodeType::MemInc);
+    REQUIRE(32767 == instr.param());
+    REQUIRE(OpcodeType::MemInc == instr.opcode());
+}

@@ -126,17 +126,31 @@ MemoryPointerMatcher Brainfreeze::TestHelpers::MemoryPointerIs(std::size_t expec
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-std::vector<instruction_t> Brainfreeze::TestHelpers::Compile(const std::string& code)
+std::vector<instruction_t> Brainfreeze::TestHelpers::Compile(
+    const std::string& code,
+    std::function<void(Compiler&)>&& configureCallback)
 {
     Compiler compiler;
+    
+    if (configureCallback != nullptr)
+    {
+        configureCallback(compiler);
+    }
+
     return compiler.compile(code);
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-std::unique_ptr<Interpreter> Brainfreeze::TestHelpers::CreateInterpreter(const std::string& code)
+std::vector<instruction_t> Brainfreeze::TestHelpers::Compile(const std::string& code)
+{
+    return Compile(code, nullptr);
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+Interpreter Brainfreeze::TestHelpers::CreateInterpreter(const std::string& code)
 {
     Compiler compiler;
-    return std::make_unique<Interpreter>(compiler.compile(code));
+    return Interpreter(compiler.compile(code));
 }
 
 //---------------------------------------------------------------------------------------------------------------------

@@ -9,8 +9,11 @@ namespace Brainfreeze
 {
     namespace TestHelpers
     {
+        std::vector<instruction_t> Compile(
+            const std::string& code,
+            std::function<void(Compiler&)>&& configureCallback);
         std::vector<instruction_t> Compile(const std::string& code);
-        std::unique_ptr<Interpreter> CreateInterpreter(const std::string& code);
+        Interpreter CreateInterpreter(const std::string& code);
         
         /** Matches memory values in a brainfreeze proram. */
         // TODO: Take a memory pointer type for better test/matching.

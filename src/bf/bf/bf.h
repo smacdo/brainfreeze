@@ -174,8 +174,26 @@ namespace Brainfreeze
         /** Convert Brainfreeze code into an exeuctable Brainfreeze program. */
         std::vector<instruction_t> compile(std::string_view programtext) const;
 
+    public:
+        /** Get if the compiler can merge a sequence of identical instructions together. */
+        bool isMergeInstructionsEnabled() const noexcept { return mergeInstructions_; }
+
+        /** Set if the compiler can merge a sequence of identical instructions together. */
+        void setMergeInstructionsEnabled(bool isEnabled) noexcept { mergeInstructions_ = isEnabled; }
+
+        /** Get if the compiler can precalculate the distance to the corresponding jump target. */
+        bool isPrecalculateJumpOffsetsEnabled() const noexcept { return precalculateJumpOffsets_; }
+
+        /** Set if the compiler can precalculate the distance to the corresponding jump target. */
+        void setPrecalculateJumpOffsetsEnabled(bool isEnabled) noexcept { precalculateJumpOffsets_ = isEnabled; }
+
+    public:
         /** Get if an instruction can be merged together for optimization. TODO: move this. */
         static bool isMergable(const instruction_t& instr) noexcept;
+
+    private:
+        bool mergeInstructions_ = true;
+        bool precalculateJumpOffsets_ = true;
     };
 
     /** Defines an executable Brainfreeze instruction. */
@@ -197,6 +215,9 @@ namespace Brainfreeze
         /** Get the opcode encoded in this instruction. */
         OpcodeType opcode() const noexcept;
 
+        /** Set the opcode encoded in this instruction. */
+        void setOpcode(OpcodeType op) noexcept;
+
         /** Check if this instruction has an opcode of the given type. */
         bool isA(OpcodeType op) const noexcept;
 
@@ -211,6 +232,12 @@ namespace Brainfreeze
          * An exception is thrown if the new value is too large or too small to be stored.
          */
         void incrementParam(param_t amount);
+
+        /** Equality comparison operator. */
+        bool operator ==(const instruction_t& other) const noexcept;
+
+        /** Inequality comparison operator. */
+        bool operator !=(const instruction_t& other) const noexcept;
 
     private:
         uint32_t data_ = 0;

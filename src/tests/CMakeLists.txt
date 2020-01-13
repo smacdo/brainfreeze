@@ -8,9 +8,12 @@ set(SOURCES
 )
 
 set(TEST_FILES
-	test_basics.cpp
+    argparser_tests.cpp
+    compiler_tests.cpp
 	instruction_tests.cpp
+	interpreter_tests.cpp
 	jumpsearch_tests.cpp
+	smoke_tests.cpp
 )
 
 add_executable(tests ${SOURCES} ${TEST_FILES})

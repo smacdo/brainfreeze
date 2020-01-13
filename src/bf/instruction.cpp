@@ -29,6 +29,12 @@ OpcodeType instruction_t::opcode() const noexcept
 }
 
 //---------------------------------------------------------------------------------------------------------------------
+void instruction_t::setOpcode(OpcodeType op) noexcept
+{
+    data_ = (data_ & 0xFFFFFF00) | (static_cast<uint8_t>(op) & 0x000000FF);
+}
+
+//---------------------------------------------------------------------------------------------------------------------
 instruction_t::param_t instruction_t::param() const noexcept
 {
     return static_cast<instruction_t::param_t>((data_ & 0xFFFFFF00) >> 8);
@@ -61,4 +67,16 @@ void instruction_t::incrementParam(instruction_t::param_t amount)
 bool instruction_t::isA(OpcodeType op) const noexcept
 {
     return opcode() == op;
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+bool instruction_t::operator ==(const instruction_t& other) const noexcept
+{
+    return data_ == other.data_;
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+bool instruction_t::operator !=(const instruction_t& other) const noexcept
+{
+    return !(*this == other);
 }
