@@ -126,15 +126,49 @@ MemoryPointerMatcher Brainfreeze::TestHelpers::MemoryPointerIs(std::size_t expec
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-std::ostream& Brainfreeze::TestHelpers::operator <<(std::ostream& os, Interpreter::instruction_pointer_t ip)
+std::vector<instruction_t> Brainfreeze::TestHelpers::Compile(const std::string& code)
+{
+    Compiler compiler;
+    return compiler.compile(code);
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+std::unique_ptr<Interpreter> Brainfreeze::TestHelpers::CreateInterpreter(const std::string& code)
+{
+    Compiler compiler;
+    return std::make_unique<Interpreter>(compiler.compile(code));
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+std::ostream& Brainfreeze::operator <<(std::ostream& os, Interpreter::instruction_pointer_t ip)
 {
     os << std::to_string(ip.address());
     return os;
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-std::ostream& Brainfreeze::TestHelpers::operator <<(std::ostream& os, Interpreter::memory_pointer_t mp)
+std::ostream& Brainfreeze::operator <<(std::ostream& os, Interpreter::memory_pointer_t mp)
 {
     os << std::to_string(mp.address());
+    return os;
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+std::ostream& Brainfreeze::operator <<(std::ostream& os, instruction_t instruction)
+{
+    os << Brainfreeze::Helpers::AsName(instruction.opcode());
+
+    if (instruction.param() != 0)
+    {
+        os << ":" << instruction.param();
+    }
+
+    return os;
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+std::ostream& Brainfreeze::operator <<(std::ostream& os, std::vector<instruction_t>::const_iterator itr)
+{
+    os << *itr;
     return os;
 }

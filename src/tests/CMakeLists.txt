@@ -10,6 +10,7 @@ set(SOURCES
 set(TEST_FILES
 	test_basics.cpp
 	instruction_tests.cpp
+	jumpsearch_tests.cpp
 )
 
 add_executable(tests ${SOURCES} ${TEST_FILES})

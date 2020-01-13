@@ -9,6 +9,9 @@ namespace Brainfreeze
 {
     namespace TestHelpers
     {
+        std::vector<instruction_t> Compile(const std::string& code);
+        std::unique_ptr<Interpreter> CreateInterpreter(const std::string& code);
+        
         /** Matches memory values in a brainfreeze proram. */
         // TODO: Take a memory pointer type for better test/matching.
         class MemoryMatcher : public Catch::MatcherBase<Interpreter>
@@ -50,8 +53,10 @@ namespace Brainfreeze
         MemoryMatcher HasMemory(size_t offset, Interpreter::byte_t expected);
         InstructionPointerMatcher InstructionPointerIs(std::size_t expectedAddress);  // TODO: MemoryAdddressIs
         MemoryPointerMatcher MemoryPointerIs(std::size_t expectedAddress);
-
-        std::ostream& operator <<(std::ostream& os, Interpreter::instruction_pointer_t ip);
-        std::ostream& operator <<(std::ostream& os, Interpreter::memory_pointer_t mp);
     }
+
+    std::ostream& operator <<(std::ostream& os, Interpreter::instruction_pointer_t ip);
+    std::ostream& operator <<(std::ostream& os, Interpreter::memory_pointer_t mp);
+    std::ostream& operator <<(std::ostream& os, instruction_t instruction);
+    std::ostream& operator <<(std::ostream& os, std::vector<instruction_t>::const_iterator itr);
 }

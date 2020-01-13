@@ -24,7 +24,9 @@ namespace Brainfreeze
         Read = 6,
         Write = 7,
         JumpForward = 9,
-        JumpBack = 10
+        JumpBack = 10,
+        FastJumpForward = 11,
+        FastJumpBack = 12
     };
 
     /** The brainfreeze interpreter. */
@@ -172,12 +174,6 @@ namespace Brainfreeze
         /** Convert Brainfreeze code into an exeuctable Brainfreeze program. */
         std::vector<instruction_t> compile(std::string_view programtext) const;
 
-        /** Get if a character is a valid brainfreeze instruction. */
-        static bool isInstruction(char c) noexcept;
-
-        /** Get the compiled instruction form of a brainfreeze character. */
-        static instruction_t asInstruction(char c);
-
         /** Get if an instruction can be merged together for optimization. TODO: move this. */
         static bool isMergable(const instruction_t& instr) noexcept;
     };
@@ -231,6 +227,29 @@ namespace Brainfreeze
          * \returns  New interpreter that is ready to run the loaded code.
          */
         std::unique_ptr<Interpreter> LoadFromDisk(const std::string& filepath);
+
+        /**
+         * Find the location of the matching jump instruction for a given jump in the Brainfreeze program.
+         * ex: Given a program "+[[-]]", FindJumpTarget(1) would return 5.
+         * NOTE: This function has undefined behavior if there is not a matching jump instruction!
+         *       (to preserve runtime speed).
+         */
+        std::vector<instruction_t>::const_iterator FindJumpTarget(
+            std::vector<instruction_t>::const_iterator begin,
+            std::vector<instruction_t>::const_iterator end,
+            std::vector<instruction_t>::const_iterator jump);
+
+        /** Get if a character is a valid brainfreeze instruction. */
+        bool IsInstruction(char c) noexcept;
+
+        /** Get the compiled instruction form of a brainfreeze character. */
+        instruction_t AsInstruction(char c);
+
+        /** Get the character corresponding to a Brainfreeze instruction. */
+        char AsChar(OpcodeType instruction);
+
+        /** Get the name of a Brainfreeze instruction. */
+        std::string AsName(OpcodeType instruction);
     }
 
     namespace Details

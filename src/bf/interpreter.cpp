@@ -105,8 +105,7 @@ Interpreter::RunState Interpreter::runStep()
         // Only execute if byte at data pointer is zero
         if (*mp_ == 0)
         {
-            // TODO: Handle case when param is zero (unoptimized, no jump stored).
-            ip_ += ip_->param();
+            ip_ = Helpers::FindJumpTarget(instructions_.begin(), instructions_.end(), ip_);
         }
 
         break;
@@ -115,7 +114,25 @@ Interpreter::RunState Interpreter::runStep()
         // Only execute if byte at data pointer is non-zero
         if (*mp_ != 0)
         {
-            // TODO: Handle case when param is zero (unoptimized, no jump stored).
+            ip_ = Helpers::FindJumpTarget(instructions_.begin(), instructions_.end(), ip_);
+        }
+        break;
+
+    case OpcodeType::FastJumpForward:
+        // Only execute if byte at data pointer is zero
+        if (*mp_ == 0)
+        {
+            assert(ip_->param() > 0);
+            ip_ += ip_->param();
+        }
+
+        break;
+
+    case OpcodeType::FastJumpBack:
+        // Only execute if byte at data pointer is non-zero
+        if (*mp_ != 0)
+        {
+            assert(ip_->param() > 0);
             ip_ -= ip_->param();
         }
         break;

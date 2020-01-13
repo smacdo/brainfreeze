@@ -7,20 +7,7 @@
 #include <stdexcept>
 
 using namespace Brainfreeze;
-
-// TODO: Maybe put this in a header for other poeple to use?
-namespace Characters
-{
-    const char END_OF_STREAM = '\0';
-    const char PTR_INC = '>';
-    const char PTR_DEC = '<';
-    const char MEM_INC = '+';
-    const char MEM_DEC = '-';
-    const char WRITE = '.';
-    const char READ = ',';
-    const char JMP_FWD = '[';
-    const char JMP_BAC = ']';
-}
+using namespace Brainfreeze::Helpers;
 
 //---------------------------------------------------------------------------------------------------------------------
 std::vector<instruction_t> Compiler::compile(std::string_view programtext) const
@@ -36,7 +23,7 @@ std::vector<instruction_t> Compiler::compile(std::string_view programtext) const
     for (auto c : programtext)
     {
         // Skip characters that are not legal brainfreeze instructions.
-        if (!isInstruction(c))
+        if (!IsInstruction(c))
         {
             continue;
         }
@@ -45,7 +32,7 @@ std::vector<instruction_t> Compiler::compile(std::string_view programtext) const
         auto nextIndex = instructions.size();
 
         // Get the instruction form for this character.
-        auto instr = asInstruction(c);
+        auto instr = AsInstruction(c);
 
         // Handle jump instructions specially. Jump forwards need to have their position recorded so that when the
         // matching backward jump is found both jumps can have their offset written into them for optimization.
@@ -114,45 +101,6 @@ std::vector<instruction_t> Compiler::compile(std::string_view programtext) const
     // Remove unused space from the list of instructions before returning.
     instructions.shrink_to_fit();
     return instructions;
-}
-
-//---------------------------------------------------------------------------------------------------------------------
-bool Compiler::isInstruction(char c) noexcept
-{
-    return c == Characters::PTR_INC
-        || c == Characters::PTR_DEC
-        || c == Characters::MEM_INC
-        || c == Characters::MEM_DEC
-        || c == Characters::WRITE
-        || c == Characters::READ
-        || c == Characters::JMP_FWD
-        || c == Characters::JMP_BAC;
-}
-
-//---------------------------------------------------------------------------------------------------------------------
-instruction_t Compiler::asInstruction(char c)
-{
-    switch (c)
-    {
-    case Characters::PTR_INC:
-        return instruction_t(OpcodeType::PtrInc, 1);
-    case Characters::PTR_DEC:
-        return instruction_t(OpcodeType::PtrDec, 1);
-    case Characters::MEM_INC:
-        return instruction_t(OpcodeType::MemInc, 1);
-    case Characters::MEM_DEC:
-        return instruction_t(OpcodeType::MemDec, 1);
-    case Characters::READ:
-        return instruction_t(OpcodeType::Read, 0);
-    case Characters::WRITE:
-        return instruction_t(OpcodeType::Write, 0);
-    case Characters::JMP_FWD:
-        return instruction_t(OpcodeType::JumpForward, 0);
-    case Characters::JMP_BAC:
-        return instruction_t(OpcodeType::JumpBack, 0);
-    default:
-        return instruction_t(OpcodeType::NoOperation, 0);
-    }
 }
 
 //---------------------------------------------------------------------------------------------------------------------
