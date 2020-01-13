@@ -47,7 +47,11 @@ void instruction_t::incrementParam(instruction_t::param_t amount)
 
     if (std::numeric_limits<param_t>::max() - current < amount)
     {
-        throw std::runtime_error("incremented instruction parameter value too large to be stored");
+        throw std::overflow_error("incremented instruction parameter value too large to be stored");
+    }
+    else if (std::numeric_limits<param_t>::min() - current >= amount)
+    {
+        throw std::underflow_error("incremented instruction parameter value too small to be stored");
     }
 
     setParam(current + amount);

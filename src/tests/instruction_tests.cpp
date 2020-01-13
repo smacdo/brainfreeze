@@ -1,6 +1,7 @@
 #include "bf.h"
 #include "testhelpers.h"
 #include <catch2/catch.hpp>
+#include <iostream>
 
 using namespace Brainfreeze;
 using namespace Brainfreeze::TestHelpers;
@@ -99,4 +100,35 @@ TEST_CASE("can test an instruction to see what opcode it has", "[instructions]")
     REQUIRE_FALSE(i1.isA(OpcodeType::NoOperation));
 }
 
-// TODO: Test instruction overflow / underflow.
+TEST_CASE("can increment a parameter", "[instructions]")
+{
+    instruction_t i;
+    REQUIRE(0 == i.param());
+
+    i.incrementParam(3);
+    REQUIRE(3 == i.param());
+
+    i.incrementParam(2);
+    REQUIRE(5 == i.param());
+
+    i.incrementParam(-4);
+    REQUIRE(1 == i.param());
+}
+
+TEST_CASE("increment will throw an exception if incremented past max", "[instructions]")
+{
+    REQUIRE_THROWS_AS([&]() {
+        instruction_t i;
+        i.setParam(32767);
+        i.incrementParam(1);
+    }(), std::overflow_error);
+}
+
+TEST_CASE("increment will wrap if decremented past min", "[instructions]")
+{
+    REQUIRE_THROWS_AS([&]() {
+        instruction_t i;
+        i.setParam(-32768);
+        i.incrementParam(-1);
+        }(), std::underflow_error);
+}
