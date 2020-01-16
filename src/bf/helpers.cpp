@@ -35,9 +35,11 @@ std::unique_ptr<Interpreter> Brainfreeze::Helpers::LoadFromDisk(const std::strin
     std::stringstream sstream;
     std::string line;
 
-    infile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+    // TODO: FIXME this throws an exception with getline finding EOF solution read it all at once and avoid
+    //       getline.
+    //infile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
 
-    infile.open(filename.c_str());
+    infile.open(filename, std::ios_base::in | std::ios_base::binary);
 
     while (std::getline(infile, line, '\n'))
     {

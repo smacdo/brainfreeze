@@ -1,5 +1,6 @@
 // Copyright 2009-2020, Scott MacDonald.
 #include "bf.h"
+#include "argparser.h"
 
 #include <iostream>
 #include <fstream>
@@ -40,103 +41,74 @@ void printHelp()
         << std::endl << std::endl;
 }
 
-int main( int, char*[] )
+int unguardedMain(int argc, const char** argv)
 {
-    //
-    // Create our list of allowable arguments
-    //
-    //unsigned int memoryBlockCount, memoryBlockSize, eolValue;
-   
-    // Command line only options
-/*    po::options_description generic("Generic Options");
-    generic.add_options()
-        ("help",    "Show this help message and exit")
-        ("script",   po::value<std::string>(),
-                    "Path to brainfreeze script file")
-        ("version", "Output version informaton and exit")
-    ;
+    // Configure command line arguments.
+    // TODO: Support specifying input file w/out the -f flag.
+    // TODO: Support passing BF code inline
+    // TODO: Support reading from standard in / out.
+    // TODO: Support setting input / output as files.
+    ArgParser argparser;
 
-    po::positional_options_description pod;
-    pod.add("script", -1);
- 
-    // Options that are allowed in both the command line and in a
-    // config file
-    po::options_description config("Configuration");
-    config.add_options()
-        ("memlength",
-         po::value<unsigned int>(&memoryBlockCount)->default_value(30000),
-         "Number of memory storage units for script" )
-        ("memsize",
-         po::value<unsigned int>(&memoryBlockSize)->default_value(8),
-         "Size in bits of each memory storage unit (8,16,32)")
-        ("eol",
-         po::value<unsigned int>(&eolValue)->default_value(10),
-         "EOL (end of line) ASCII value")
-    ;
+    //argparser.setDescription("Runs Brainfreeze programs");
 
-    generic.add(config);
+    argparser.addFlag('h', "help", "Show this help message and exit");
+    argparser.addFlag('v', "version", "Show version information and exit");
+    argparser.addParameter('f', "file", 1, "Path to Brainfreeze program");  // TODO: Make this take unbound 
+    argparser.addParameter("cells", 1, "Number of memory cells to allocate"); // TODO: Default 30k, type INT
+    argparser.addParameter("blocksize", 1, "Size of each memory cell in bytes (1, 2 or 4)");
 
-    // Read from the command line
-    po::variables_map vm;
-    po::store( po::command_line_parser( argc, argv ).
-               options(generic).positional(pod).run(),
-               vm );
-    po::notify( vm );
-
-    // Read from an input file
-    std::ifstream configfile("brainfreeze.cfg");
-    po::store( po::parse_config_file( configfile, config ), vm );
-    po::notify( vm );
-
-
-    //
-    // So what options did we get?
-    //
-    if ( vm.count("help") )
+    try
     {
-        printHelp( generic );
-        return 1;
+        argparser.parse(argc, argv);
     }
-    else if ( vm.count("version") )
+    catch (const ArgParserException & e)
+    {
+        std::cerr << e.message() << std::endl;
+        printHelp();
+        return EXIT_FAILURE;
+    }
+
+    if (argparser.isFlagSet("help"))
+    {
+        printHelp();
+    }
+    else if (argparser.isFlagSet("version"))
     {
         printVersionInfo();
-        return 0;
     }
-    else if ( vm.count("script") < 1 )
+    else if (argparser.isFlagSet("file")) // TODO: This should be "paramSet" or something!
     {
-        std::cerr << "You must specify at least on brainfreeze script to run"
-                  << std::endl;
-        return 0;
+        auto args = argparser.getArgumentsForParameter("file");
+        // TODO: Assert size is 1 or at least 1.
+        
+        // Load code from disk.
+        // TODO: Manually load the code, and then configure the compiler instead of this oneshot function.
+        // TODO: Configure interpeter with command line options.
+        // TODO: Print an error if code failed to load.
+        // TODO: Print errors from code along with line/column and highlighting.
+        auto interpreter = Brainfreeze::Helpers::LoadFromDisk(args[0]);
+        
+        interpreter->run();
     }
-
-    //
-    // Load the script into memory and run that sucker
-    //
-    std::string contents;
-    std::string scriptfile = vm["script"].as<std::string>();
-
-    if ( false == BF::loadFromDisk( scriptfile, contents ) )
+    else
     {
-        std::cerr << "Could not open script: " << contents << std::endl;
-        return 2;
+        std::cerr << "No action or program given" << std::endl;
+        printHelp();
     }
 
-    BFProgram app( contents );
+    return EXIT_SUCCESS;
+}
 
-    if (! app.compile() )
+int main(int argc, const char* argv[])
+{
+    try
     {
-        std::cerr << "Failed to compile script: "
-                  << app.errorText() << std::endl;
-        return 3;
+        return unguardedMain(argc, argv);
     }
-
-    if (! app.run() )
+    catch (const std::exception & e)
     {
-        std::cerr << "Failed to execute script: "
-                  << app.errorText() << std::endl;
-        return 4;
+        std::cerr << "UNHANDLED EXCEPTION: " << e.what() << std::endl;
+        return EXIT_FAILURE;
     }
-    */
-    // It worked! woohoo
-    return 0;
 }
