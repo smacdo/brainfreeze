@@ -9,15 +9,15 @@ using namespace Brainfreeze::TestHelpers;
 TEST_CASE("test if a simple flag was set", "[argparser]")
 {
     ArgParser ap;
-    ap.addFlag('h', "help");
-    ap.addFlag("foobar");
+    ap.addFlagParameter("help");
+    ap.addFlagParameter("foobar");
 
     SECTION("is set if it is the only option")
     {
         const int ParamCount = 1;
         const char* Params[ParamCount] = { "--foobar" };
 
-        ap.addFlag("foobar");
+        ap.addFlagParameter("foobar");
         ap.parse(ParamCount, Params);
 
         REQUIRE(ap.isFlagSet("foobar"));
@@ -28,7 +28,7 @@ TEST_CASE("test if a simple flag was set", "[argparser]")
         const int ParamCount = 3;
         const char* Params[ParamCount] = { "--foobar", "--help", "--ohnoes" };
 
-        ap.addFlag("ohnoes");
+        ap.addFlagParameter("ohnoes");
         ap.parse(ParamCount, Params);
 
         REQUIRE(ap.isFlagSet("help"));
@@ -39,8 +39,8 @@ TEST_CASE("test if a simple flag was set", "[argparser]")
         const int ParamCount = 3;
         const char* Params[ParamCount] = { "--foo", "--bar", "--foobar" };
 
-        ap.addFlag("foo");
-        ap.addFlag("bar");
+        ap.addFlagParameter("foo");
+        ap.addFlagParameter("bar");
         ap.parse(ParamCount, Params);
 
         REQUIRE(ap.isFlagSet("foobar"));
@@ -55,8 +55,8 @@ TEST_CASE("test if a simple flag was set", "[argparser]")
         const int ParamCount = 3;
         const char* Params[ParamCount] = { "--foobar", "--help2", "--ohnoes" };
 
-        ap.addFlag("help2");
-        ap.addFlag("ohnoes");
+        ap.addFlagParameter("help2");
+        ap.addFlagParameter("ohnoes");
         ap.parse(ParamCount, Params);
 
         REQUIRE_FALSE(ap.isFlagSet("help"));
@@ -66,7 +66,7 @@ TEST_CASE("test if a simple flag was set", "[argparser]")
 TEST_CASE("an exception is thrown if an argument is not listed as a flag", "[argparser]")
 {
     ArgParser ap;
-    ap.addFlag('h', "help");
+    ap.addFlagParameter("help");
 
     const int ParamCount = 1;
     const char* Params[ParamCount] = { "--foobar" };
@@ -81,10 +81,10 @@ TEST_CASE("can specify a parameter that takes one string argument", "[argparser]
     const int ParamCount = 2;
     const char* Params[ParamCount] = { "--filename", "test1.txt" };
 
-    ap.addParameter("filename");
+    ap.addParameter("filename").expectedArgumentCount(1);
     ap.parse(ParamCount, Params);
 
-    auto args = ap.getArgumentsForParameter("filename");
+    auto args = ap.parameterArguments("filename");
     
     REQUIRE(1 == args.size());
     REQUIRE("test1.txt" == args[0]);
@@ -97,10 +97,10 @@ TEST_CASE("can specify a parameter that takes three string arguments", "[argpars
     const int ParamCount = 4;
     const char* Params[ParamCount] = { "--filename", "test1.txt", "test2.txt", "test3.txt" };
 
-    ap.addParameter("filename", 3);
+    ap.addParameter("filename").expectedArgumentCount(3);
     ap.parse(ParamCount, Params);
 
-    auto args = ap.getArgumentsForParameter("filename");
+    auto args = ap.parameterArguments("filename");
 
     REQUIRE(3 == args.size());
     REQUIRE("test1.txt" == args[0]);
@@ -117,7 +117,7 @@ TEST_CASE("throws an exception if parameter expected arguments ar emissing", "[a
         const int ParamCount = 2;
         const char* Params[ParamCount] = { "--filename", "test.png" };
 
-        ap.addParameter("filename", 1);
+        ap.addParameter("filename").expectedArgumentCount(1);
 
         REQUIRE_THROWS_AS([&]() { ap.parse(ParamCount - 1, Params); }(), ExpectedParameterArgumentMissingException);
         REQUIRE_NOTHROW([&]() { ap.parse(ParamCount, Params); }());
@@ -128,7 +128,7 @@ TEST_CASE("throws an exception if parameter expected arguments ar emissing", "[a
         const int ParamCount = 3;
         const char* Params[ParamCount] = { "--filename", "test.png", "hello.png" };
 
-        ap.addParameter("filename", 2);
+        ap.addParameter("filename").expectedArgumentCount(2);
 
         REQUIRE_THROWS_AS([&]() { ap.parse(ParamCount - 2, Params); }(), ExpectedParameterArgumentMissingException);
         REQUIRE_THROWS_AS([&]() { ap.parse(ParamCount - 1, Params); }(), ExpectedParameterArgumentMissingException);
@@ -142,10 +142,10 @@ TEST_CASE("can specify multiple parameters that take arguments", "[argparser]")
     // TODO: More test cases in here with different set ups to make sure it works
     ArgParser ap;
 
-    ap.addParameter("filename");
-    ap.addParameter("something");
+    ap.addParameter("filename").expectedArgumentCount(1);
+    ap.addParameter("something").expectedArgumentCount(1);
     ap.addParameter("names");
-    ap.addFlag("verbose");
+    ap.addFlagParameter("verbose");
 
     SECTION("two parameters with one argument each separated by a flag")
     {
@@ -154,19 +154,149 @@ TEST_CASE("can specify multiple parameters that take arguments", "[argparser]")
 
         ap.parse(ParamCount, Params);
 
-        auto args = ap.getArgumentsForParameter("filename");
+        auto args = ap.parameterArguments("filename");
 
         REQUIRE(1 == args.size());
         REQUIRE("test1.txt" == args[0]);
 
-        args = ap.getArgumentsForParameter("something");
+        args = ap.parameterArguments("something");
 
         REQUIRE(1 == args.size());
         REQUIRE("adam" == args[0]);
     }
-
-
 }
+
+TEST_CASE("parameter callback each time it is encountered", "[argparser]")
+{
+    ArgParser ap;
+    ap.addFlagParameter("extra1");
+    ap.addFlagParameter("extra2");
+
+    SECTION("one callback for one parameter")
+    {
+        const int ParamCount = 4;
+        const char* Params[ParamCount] = { "--extra1", "--verbose", "--extra2", "--extra1" };
+
+        int verboseCounter = 0;
+        ap.addFlagParameter("verbose").onParam([&verboseCounter]() {verboseCounter++; });
+
+        ap.parse(ParamCount, Params);
+
+        REQUIRE(1 == verboseCounter);
+    }
+
+    SECTION("different callbacks for different parameters")
+    {
+        const int ParamCount = 4;
+        const char* Params[ParamCount] = { "--extra1", "--verbose", "--extra2", "--verbose" };
+
+        int verboseCounter = 0;
+        ap.addFlagParameter("verbose").onParam([&verboseCounter]() {verboseCounter++; });
+
+        ap.parse(ParamCount, Params);
+
+        REQUIRE(2 == verboseCounter);
+    }
+
+    SECTION("callbacks each time parameter is seen")
+    {
+        const int ParamCount = 4;
+        const char* Params[ParamCount] = { "--extra1", "--foo", "--bar", "--bar" };
+
+        int fooCounter = 0;
+        ap.addFlagParameter("foo").onParam([&fooCounter]() {fooCounter++; });
+
+        int barCounter = 0;
+        ap.addFlagParameter("bar").onParam([&barCounter]() {barCounter++; });
+
+        ap.parse(ParamCount, Params);
+
+        REQUIRE(1 == fooCounter);
+        REQUIRE(2 == barCounter);
+    }
+}
+
+TEST_CASE("parameter argument invoked each time argument seen for parmeter", "[argparser]")
+{
+    ArgParser ap;
+    ap.addFlagParameter("extra1");
+    ap.addFlagParameter("extra2");
+
+    SECTION("one callback for one argument")
+    {
+        const int ParamCount = 2;
+        const char* Params[ParamCount] = { "--test", "apple" };
+
+        std::string valueSeen;
+        ap.addFlagParameter("test")
+            .expectedArgumentCount(1)
+            .onArgument([&valueSeen](std::string_view argument) { valueSeen = argument; });
+
+        ap.parse(ParamCount, Params);
+
+        REQUIRE("apple" == valueSeen);
+    }
+
+    SECTION("many callback for one argument")
+    {
+        const int ParamCount = 4;
+        const char* Params[ParamCount] = { "--test", "grape", "pear", "peach" };
+
+        std::vector<std::string> values;
+        ap.addFlagParameter("test")
+            .expectedArgumentCount(3)
+            .onArgument([&values](std::string_view argument) { values.push_back(std::string(argument)); });
+
+        ap.parse(ParamCount, Params);
+
+        std::vector<std::string> Expected = { "grape", "pear", "peach" };
+        REQUIRE_THAT(values, Catch::Equals(Expected));
+    }
+
+    // TODO: Multiple callbacks for multipel arguments
+}
+
+TEST_CASE("string parameter binding", "[argparser]")
+{
+    ArgParser ap;
+
+    SECTION("one binding for one argument")
+    {
+        const int ParamCount = 2;
+        const char* Params[ParamCount] = { "--name", "christine" };
+
+        std::string person;
+        ap.addParameter("name").bindString(&person);
+
+        ap.parse(ParamCount, Params);
+
+        REQUIRE("christine" == person);
+    }
+
+    // TODO: Test exception when binding to multiple expected arguments.
+}
+
+TEST_CASE("int parameter binding", "[argparser]")
+{
+    ArgParser ap;
+
+    SECTION("one binding for one argument")
+    {
+        const int ParamCount = 2;
+        const char* Params[ParamCount] = { "--favorite-number", "42" };
+
+        int favoriteNumber = 0;
+        ap.addParameter("favorite-number").bindInt(&favoriteNumber);
+
+        ap.parse(ParamCount, Params);
+
+        REQUIRE(42 == favoriteNumber);
+    }
+
+    // TODO: Test exception when binding to multiple expected arguments.
+}
+
+// TODO: Test size_t binding.
 
 // TODO: Exception with no arguments.
 // TODO: Exception with too many arguments.

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.2)
 project(argparser)
 
-set(SOURCES argparser/argparser.h argparser.cpp argparserexception.cpp)
+set(SOURCES argparser/argparser.h argparser.cpp argparserexception.cpp parameterbuilder.cpp)
 
 add_library(argparser STATIC ${SOURCES})
 target_include_directories(argparser PUBLIC argparser)

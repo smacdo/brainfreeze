@@ -10,50 +10,35 @@
 
 namespace Brainfreeze
 {
+    class ParameterBuilder;
+
     /** A simple command line argument parser. */
     // TDOO: Support an argument builder interface.
     class ArgParser
     {
     public:
-        using parameter_callback_t = std::function<void(void)>;
-        using parameter_argument_callback_t = std::function<void(std::string_view)>;
-
-    public:
         /** Parse the given command line arguments. */
+        // TODO: I think the results of parsing should be returned as a result object instead of stored in the
+        //       ArgParser as state.
         void parse(int argc, const char** argv);
 
         /** Parse the given command line arguments. */
         void parse(const std::vector<const std::string>& args);
 
-        /** Add a command line flag with no parameters. */
-        void addFlag(
-            const std::string& longName,
-            const std::string& description = "");
+        /** Add a flag parameter that does not take any values and returns a builder for further configuration. */
+        ParameterBuilder addFlagParameter(const std::string& flagName);
 
-        /** Add a command line flag with no parameters. */
-        void addFlag(
-            char shortName,
-            const std::string& longName,
-            const std::string& description = "");
+        /** Add a parameter that expects a value and returns a builder for further configuration. */
+        ParameterBuilder addParameter(const std::string& name);
 
-        /** Check if a flag was passd. */
-        bool isFlagSet(const std::string& longName) const;
+        /** Check if a parameter was parsed. */
+        bool didParse(const std::string& parameterName) const;
 
-        /** Add a string parameter to the argument parser. */
-        void addParameter(
-            const std::string& longName,
-            size_t expectedArgumentCount = 1,
-            const std::string& description = "");
-
-        /** Add a string parameter to the argument parser. */
-        void addParameter(
-            char shortName,
-            const std::string& longName,
-            size_t expectedArgumentCount = 1,
-            const std::string& description = "");
+        /** Check if a parameter flag was parsed. */
+        bool isFlagSet(const std::string& flagName) const;
 
         /** Get the arguments associated with a parameter. */
-        const std::vector<std::string>& getArgumentsForParameter(const std::string& parameterName) const;
+        const std::vector<std::string>& parameterArguments(const std::string& parameterName) const;
 
     public:
         /** Convert the traditional argc/argv parameters to a list of strings. */
@@ -66,21 +51,49 @@ namespace Brainfreeze
         std::vector<std::string> argsToParse_;
         size_t nextArgIndex_ = 0;
 
-    private:
+    public:
 
         struct parameter_t
         {
+            using parameter_callback_t = std::function<void(void)>;
+            using argument_callback_t = std::function<void(const std::string&)>;
+
             char shortName;
             std::string longName;
             std::string description;
             std::vector<std::string> arguments;
             size_t expectedArgumentCount = 0;
             bool isSet = false;
+            bool isFlag = false;
             parameter_callback_t onParam;
-            parameter_argument_callback_t onArgument;
+            argument_callback_t onArgument;
         };
 
-        std::map<std::string, parameter_t> parameters_;
+        // TODO: Make a map std longName => parameterName (or longName => parameter_t)
+        //       to support parameter names with a different/reconfigured long name.
+        std::map<std::string, std::unique_ptr<parameter_t>> parameters_;
+    };
+
+    /** Configures a command line parameter using the builder pattern. */
+    class ParameterBuilder
+    {
+    public:
+        ParameterBuilder(ArgParser::parameter_t* paramToBuild);
+
+        ParameterBuilder& shortName(char name);
+        ParameterBuilder& longName(const std::string& name);
+        ParameterBuilder& description(const std::string& description);
+        ParameterBuilder& expectedArgumentCount(size_t count);
+        ParameterBuilder& onParam(ArgParser::parameter_t::parameter_callback_t&& callback);
+        ParameterBuilder& onArgument(ArgParser::parameter_t::argument_callback_t&& callback);
+        ParameterBuilder& isFlag(bool isFlag);
+
+        ParameterBuilder& bindString(std::string* binding);
+        ParameterBuilder& bindInt(int* binding);
+        ParameterBuilder& bindSize(size_t* binding);
+
+    private:
+        ArgParser::parameter_t* param_ = nullptr;
     };
     
     /** Argument parser exception. */

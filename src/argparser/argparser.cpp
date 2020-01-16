@@ -3,6 +3,7 @@
 
 #include <string>
 #include <stdexcept>
+#include <cassert>
 
 using namespace Brainfreeze;
 
@@ -19,6 +20,7 @@ using namespace Brainfreeze;
 // TODO: Support required options.
 // TODO: Support explictly setting bool parameter value to true or false. Right now is always false unless the
 //       parameter is passed in long or short form in which case it is always true.
+// TODO: Allow/disallow parameter being specified more than once.
 
 //---------------------------------------------------------------------------------------------------------------------
 void ArgParser::parse(int argc, const char** argv)
@@ -60,29 +62,44 @@ void ArgParser::parseLongName(const std::string& parameterName)
     }
 
     auto& param = paramItr->second;
+    assert(param != nullptr);
+
+    // TODO: Handle if the parameter was specified multiple times.
 
     // Mark the parameter as being present.
-    param.isSet = true;
+    param->isSet = true;
+
+    // If there is a callback for the parameter invoke it now (before reading arguments).
+    if (param->onParam)
+    {
+        param->onParam();
+    }
 
     // Are there parameters associated with this?
-    if (param.expectedArgumentCount > 0)
+    if (param->expectedArgumentCount > 0)
     {
         // Read as many of the expected arguments as possible.
         // TODO: Handle optional arguments.
-        while (param.arguments.size() < param.expectedArgumentCount)
+        while (param->arguments.size() < param->expectedArgumentCount)
         {
             // Make sure there is another argument to read.
             if (nextArgIndex_ >= argsToParse_.size())
             {
                 throw ExpectedParameterArgumentMissingException(
                     parameterName,
-                    param.expectedArgumentCount - param.arguments.size() - 1,
-                    param.expectedArgumentCount,
+                    param->expectedArgumentCount - param->arguments.size() - 1,
+                    param->expectedArgumentCount,
                     __FILE__, __LINE__);
             }
 
             // TODO: Make sure this is a valid parameter argument (no short/long names).
-            param.arguments.push_back(argsToParse_[nextArgIndex_++]);
+            param->arguments.push_back(argsToParse_[nextArgIndex_++]);
+
+            // Invoke a callback if one was given.
+            if (param->onArgument)
+            {
+                param->onArgument(param->arguments.back());
+            }
         }
     }
 
@@ -93,72 +110,51 @@ void ArgParser::parseLongName(const std::string& parameterName)
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-void ArgParser::addFlag(
-    const std::string& longName,
-    const std::string& description)
-{
-    addFlag('\0', longName, description);
-}
-
-//---------------------------------------------------------------------------------------------------------------------
-void ArgParser::addFlag(
-    char shortName,
-    const std::string& longName,
-    const std::string& description)
+ParameterBuilder ArgParser::addFlagParameter(const std::string& parameterName)
 {
     // TODO: Handle duplicates.
     // TODO: Handle empty longName.
-    parameter_t p;
-
-    p.shortName = shortName;
-    p.longName = longName;
-    p.description = description;
-    p.expectedArgumentCount = 0;
-
-    parameters_[longName] = p; 
+    parameters_[parameterName] = std::make_unique<parameter_t>();
+    return ParameterBuilder(parameters_[parameterName].get())
+        .longName(parameterName)
+        .isFlag(true);
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-bool ArgParser::isFlagSet(const std::string& longName) const
+bool ArgParser::didParse(const std::string& longName) const
 {
     auto paramItr = parameters_.find(longName);
 
     if (paramItr != parameters_.end())
     {
-        return paramItr->second.isSet;
+        assert(paramItr->second != nullptr);
+        return paramItr->second->isSet;
     }
 
     return false;
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-void ArgParser::addParameter(
-    const std::string& longName,
-    size_t expectedArgumentCount,
-    const std::string& description)
+bool ArgParser::isFlagSet(const std::string& flagName) const
 {
-    addParameter('\0', longName, expectedArgumentCount, description);
+    // TODO: Eliminate?
+    return didParse(flagName);
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-void ArgParser::addParameter(
-    char shortName,
-    const std::string& longName,
-    size_t expectedArgumentCount,
-    const std::string& description)
+ParameterBuilder ArgParser::addParameter(const std::string& parameterName)
 {
-    parameter_t p;
-
-    p.shortName = shortName;
-    p.longName = longName;
-    p.description = description;
-    p.expectedArgumentCount = expectedArgumentCount;
-
-    parameters_[longName] = p;
+    // TODO: Handle duplicates.
+    // TODO: Handle empty longName.
+    // TODO: This is duplicated work from addFlag.
+    parameters_[parameterName] = std::make_unique<parameter_t>();
+    return ParameterBuilder(parameters_[parameterName].get())
+        .longName(parameterName)
+        .expectedArgumentCount(1);
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-const std::vector<std::string>& ArgParser::getArgumentsForParameter(const std::string& parameterName) const
+const std::vector<std::string>& ArgParser::parameterArguments(const std::string& parameterName) const
 {
     auto paramItr = parameters_.find(parameterName);
 
@@ -167,7 +163,8 @@ const std::vector<std::string>& ArgParser::getArgumentsForParameter(const std::s
         throw std::runtime_error("Could not find a parameter with the name " + parameterName);
     }
 
-    return paramItr->second.arguments;
+    assert(paramItr->second != nullptr);
+    return paramItr->second->arguments;
 }
 
 //---------------------------------------------------------------------------------------------------------------------

@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <cassert>
 
 using namespace Brainfreeze;
 
@@ -48,15 +49,23 @@ int unguardedMain(int argc, const char** argv)
     // TODO: Support passing BF code inline
     // TODO: Support reading from standard in / out.
     // TODO: Support setting input / output as files.
+    // TODO: Take unbound input as file input.
     ArgParser argparser;
 
     //argparser.setDescription("Runs Brainfreeze programs");
 
-    argparser.addFlag('h', "help", "Show this help message and exit");
-    argparser.addFlag('v', "version", "Show version information and exit");
-    argparser.addParameter('f', "file", 1, "Path to Brainfreeze program");  // TODO: Make this take unbound 
-    argparser.addParameter("cells", 1, "Number of memory cells to allocate"); // TODO: Default 30k, type INT
-    argparser.addParameter("blocksize", 1, "Size of each memory cell in bytes (1, 2 or 4)");
+    std::string inputFilePath;
+    size_t cellCount = 30000;           // TODO: Use to configure interpreter.
+    size_t blockSize = 1;               // TODO: Use to configure interpreter.
+
+    argparser.addFlagParameter("help").shortName('h').description("Show this help message and exit");
+    argparser.addFlagParameter("version").shortName('v').description("Show version information and exit");
+    argparser.addParameter("file").shortName('f').description("Path to Brainfreeze program")
+        .bindString(&inputFilePath);  
+    argparser.addParameter("cells").description("Number of memory cells to allocate")
+        .bindSize(&cellCount);
+    argparser.addParameter("blocksize").description("Size of each memory cell in bytes (1, 2 or 4)")
+        .bindSize(&blockSize);
 
     try
     {
@@ -69,18 +78,18 @@ int unguardedMain(int argc, const char** argv)
         return EXIT_FAILURE;
     }
 
-    if (argparser.isFlagSet("help"))
+    if (argparser.didParse("help"))
     {
         printHelp();
     }
-    else if (argparser.isFlagSet("version"))
+    else if (argparser.didParse("version"))
     {
         printVersionInfo();
     }
-    else if (argparser.isFlagSet("file")) // TODO: This should be "paramSet" or something!
+    else if (argparser.didParse("file"))
     {
-        auto args = argparser.getArgumentsForParameter("file");
-        // TODO: Assert size is 1 or at least 1.
+        auto args = argparser.parameterArguments("file");
+        assert(args.size() == 1);
         
         // Load code from disk.
         // TODO: Manually load the code, and then configure the compiler instead of this oneshot function.
@@ -88,7 +97,6 @@ int unguardedMain(int argc, const char** argv)
         // TODO: Print an error if code failed to load.
         // TODO: Print errors from code along with line/column and highlighting.
         auto interpreter = Brainfreeze::Helpers::LoadFromDisk(args[0]);
-        
         interpreter->run();
     }
     else
