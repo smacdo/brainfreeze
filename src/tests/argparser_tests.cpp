@@ -1,26 +1,27 @@
 #include "argparser.h"
+#include "../argparser/exceptions.h"
 #include "testhelpers.h"
 #include <catch2/catch.hpp>
 
 using namespace Brainfreeze;
+using namespace Brainfreeze::ArgParsing;
 using namespace Brainfreeze::Helpers;
 using namespace Brainfreeze::TestHelpers;
 
 TEST_CASE("test if a simple flag was set", "[argparser]")
 {
     ArgParser ap;
-    ap.addFlagParameter("help");
-    ap.addFlagParameter("foobar");
+    ap.addOption("help");
+    ap.addOption("foobar");
 
     SECTION("is set if it is the only option")
     {
         const int ParamCount = 1;
         const char* Params[ParamCount] = { "--foobar" };
 
-        ap.addFlagParameter("foobar");
         ap.parse(ParamCount, Params);
 
-        REQUIRE(ap.isFlagSet("foobar"));
+        REQUIRE(ap.findOption("foobar").wasSet());
     }
 
     SECTION("is set if it is in the list of arguments given")
@@ -28,10 +29,10 @@ TEST_CASE("test if a simple flag was set", "[argparser]")
         const int ParamCount = 3;
         const char* Params[ParamCount] = { "--foobar", "--help", "--ohnoes" };
 
-        ap.addFlagParameter("ohnoes");
+        ap.addOption("ohnoes");
         ap.parse(ParamCount, Params);
 
-        REQUIRE(ap.isFlagSet("help"));
+        REQUIRE(ap.findOption("help").wasSet());
     }
 
     SECTION("can test if multiple flags are set")
@@ -39,15 +40,16 @@ TEST_CASE("test if a simple flag was set", "[argparser]")
         const int ParamCount = 3;
         const char* Params[ParamCount] = { "--foo", "--bar", "--foobar" };
 
-        ap.addFlagParameter("foo");
-        ap.addFlagParameter("bar");
+        ap.addOption("foo");
+        ap.addOption("bar");
+        ap.addOption("fooba");
         ap.parse(ParamCount, Params);
 
-        REQUIRE(ap.isFlagSet("foobar"));
-        REQUIRE(ap.isFlagSet("bar"));
-        REQUIRE(ap.isFlagSet("foo"));
+        REQUIRE(ap.findOption("foobar").wasSet());
+        REQUIRE(ap.findOption("bar").wasSet());
+        REQUIRE(ap.findOption("foo").wasSet());
 
-        REQUIRE_FALSE(ap.isFlagSet("fooba"));
+        REQUIRE_FALSE(ap.findOption("fooba").wasSet());
     }
 
     SECTION("is not set if it is not in the list of arguments given")
@@ -55,23 +57,23 @@ TEST_CASE("test if a simple flag was set", "[argparser]")
         const int ParamCount = 3;
         const char* Params[ParamCount] = { "--foobar", "--help2", "--ohnoes" };
 
-        ap.addFlagParameter("help2");
-        ap.addFlagParameter("ohnoes");
+        ap.addOption("help2");
+        ap.addOption("ohnoes");
         ap.parse(ParamCount, Params);
 
-        REQUIRE_FALSE(ap.isFlagSet("help"));
+        REQUIRE_FALSE(ap.findOption("help").wasSet());
     }
 }
 
 TEST_CASE("an exception is thrown if an argument is not listed as a flag", "[argparser]")
 {
     ArgParser ap;
-    ap.addFlagParameter("help");
+    ap.addOption("help");
 
     const int ParamCount = 1;
     const char* Params[ParamCount] = { "--foobar" };
 
-    REQUIRE_THROWS_AS([&]() { ap.parse(ParamCount, Params); }(), UnknownParameterLongNameException);
+    REQUIRE_THROWS_AS([&]() { ap.parse(ParamCount, Params); }(), UnknownLongNameException);
 }
 
 TEST_CASE("can specify a parameter that takes one string argument", "[argparser]")
@@ -81,10 +83,10 @@ TEST_CASE("can specify a parameter that takes one string argument", "[argparser]
     const int ParamCount = 2;
     const char* Params[ParamCount] = { "--filename", "test1.txt" };
 
-    ap.addParameter("filename").expectedArgumentCount(1);
+    ap.addOption("filename").expectsArguments(1);
     ap.parse(ParamCount, Params);
 
-    auto args = ap.parameterArguments("filename");
+    auto args = ap.findOption("filename").arguments();
     
     REQUIRE(1 == args.size());
     REQUIRE("test1.txt" == args[0]);
@@ -97,10 +99,10 @@ TEST_CASE("can specify a parameter that takes three string arguments", "[argpars
     const int ParamCount = 4;
     const char* Params[ParamCount] = { "--filename", "test1.txt", "test2.txt", "test3.txt" };
 
-    ap.addParameter("filename").expectedArgumentCount(3);
+    ap.addOption("filename").expectsArguments(3);
     ap.parse(ParamCount, Params);
 
-    auto args = ap.parameterArguments("filename");
+    auto args = ap.findOption("filename").arguments();
 
     REQUIRE(3 == args.size());
     REQUIRE("test1.txt" == args[0]);
@@ -117,9 +119,9 @@ TEST_CASE("throws an exception if parameter expected arguments ar emissing", "[a
         const int ParamCount = 2;
         const char* Params[ParamCount] = { "--filename", "test.png" };
 
-        ap.addParameter("filename").expectedArgumentCount(1);
+        ap.addOption("filename").expectsArguments(1);
 
-        REQUIRE_THROWS_AS([&]() { ap.parse(ParamCount - 1, Params); }(), ExpectedParameterArgumentMissingException);
+        REQUIRE_THROWS_AS([&]() { ap.parse(ParamCount - 1, Params); }(), ExpectedArgumentMissingException);
         REQUIRE_NOTHROW([&]() { ap.parse(ParamCount, Params); }());
     }
 
@@ -128,10 +130,10 @@ TEST_CASE("throws an exception if parameter expected arguments ar emissing", "[a
         const int ParamCount = 3;
         const char* Params[ParamCount] = { "--filename", "test.png", "hello.png" };
 
-        ap.addParameter("filename").expectedArgumentCount(2);
+        ap.addOption("filename").expectsArguments(2);
 
-        REQUIRE_THROWS_AS([&]() { ap.parse(ParamCount - 2, Params); }(), ExpectedParameterArgumentMissingException);
-        REQUIRE_THROWS_AS([&]() { ap.parse(ParamCount - 1, Params); }(), ExpectedParameterArgumentMissingException);
+        REQUIRE_THROWS_AS([&]() { ap.parse(ParamCount - 2, Params); }(), ExpectedArgumentMissingException);
+        REQUIRE_THROWS_AS([&]() { ap.parse(ParamCount - 1, Params); }(), ExpectedArgumentMissingException);
         REQUIRE_NOTHROW([&]() { ap.parse(ParamCount, Params); }());
     }
 }
@@ -142,10 +144,10 @@ TEST_CASE("can specify multiple parameters that take arguments", "[argparser]")
     // TODO: More test cases in here with different set ups to make sure it works
     ArgParser ap;
 
-    ap.addParameter("filename").expectedArgumentCount(1);
-    ap.addParameter("something").expectedArgumentCount(1);
-    ap.addParameter("names");
-    ap.addFlagParameter("verbose");
+    ap.addOption("filename").expectsArguments(1);
+    ap.addOption("something").expectsArguments(1);
+    ap.addOption("names");
+    ap.addOption("verbose");
 
     SECTION("two parameters with one argument each separated by a flag")
     {
@@ -154,12 +156,12 @@ TEST_CASE("can specify multiple parameters that take arguments", "[argparser]")
 
         ap.parse(ParamCount, Params);
 
-        auto args = ap.parameterArguments("filename");
+        auto args = ap.findOption("filename").arguments();
 
         REQUIRE(1 == args.size());
         REQUIRE("test1.txt" == args[0]);
 
-        args = ap.parameterArguments("something");
+        args = ap.findOption("something").arguments();
 
         REQUIRE(1 == args.size());
         REQUIRE("adam" == args[0]);
@@ -169,8 +171,8 @@ TEST_CASE("can specify multiple parameters that take arguments", "[argparser]")
 TEST_CASE("parameter callback each time it is encountered", "[argparser]")
 {
     ArgParser ap;
-    ap.addFlagParameter("extra1");
-    ap.addFlagParameter("extra2");
+    ap.addOption("extra1");
+    ap.addOption("extra2");
 
     SECTION("one callback for one parameter")
     {
@@ -178,7 +180,7 @@ TEST_CASE("parameter callback each time it is encountered", "[argparser]")
         const char* Params[ParamCount] = { "--extra1", "--verbose", "--extra2", "--extra1" };
 
         int verboseCounter = 0;
-        ap.addFlagParameter("verbose").onParam([&verboseCounter]() {verboseCounter++; });
+        ap.addOption("verbose").onParsed([&verboseCounter]() {verboseCounter++; });
 
         ap.parse(ParamCount, Params);
 
@@ -191,7 +193,7 @@ TEST_CASE("parameter callback each time it is encountered", "[argparser]")
         const char* Params[ParamCount] = { "--extra1", "--verbose", "--extra2", "--verbose" };
 
         int verboseCounter = 0;
-        ap.addFlagParameter("verbose").onParam([&verboseCounter]() {verboseCounter++; });
+        ap.addOption("verbose").onParsed([&verboseCounter]() {verboseCounter++; });
 
         ap.parse(ParamCount, Params);
 
@@ -204,10 +206,10 @@ TEST_CASE("parameter callback each time it is encountered", "[argparser]")
         const char* Params[ParamCount] = { "--extra1", "--foo", "--bar", "--bar" };
 
         int fooCounter = 0;
-        ap.addFlagParameter("foo").onParam([&fooCounter]() {fooCounter++; });
+        ap.addOption("foo").onParsed([&fooCounter]() {fooCounter++; });
 
         int barCounter = 0;
-        ap.addFlagParameter("bar").onParam([&barCounter]() {barCounter++; });
+        ap.addOption("bar").onParsed([&barCounter]() {barCounter++; });
 
         ap.parse(ParamCount, Params);
 
@@ -219,8 +221,8 @@ TEST_CASE("parameter callback each time it is encountered", "[argparser]")
 TEST_CASE("parameter argument invoked each time argument seen for parmeter", "[argparser]")
 {
     ArgParser ap;
-    ap.addFlagParameter("extra1");
-    ap.addFlagParameter("extra2");
+    ap.addOption("extra1");
+    ap.addOption("extra2");
 
     SECTION("one callback for one argument")
     {
@@ -228,8 +230,8 @@ TEST_CASE("parameter argument invoked each time argument seen for parmeter", "[a
         const char* Params[ParamCount] = { "--test", "apple" };
 
         std::string valueSeen;
-        ap.addFlagParameter("test")
-            .expectedArgumentCount(1)
+        ap.addOption("test")
+            .expectsArguments(1)
             .onArgument([&valueSeen](std::string_view argument) { valueSeen = argument; });
 
         ap.parse(ParamCount, Params);
@@ -243,8 +245,8 @@ TEST_CASE("parameter argument invoked each time argument seen for parmeter", "[a
         const char* Params[ParamCount] = { "--test", "grape", "pear", "peach" };
 
         std::vector<std::string> values;
-        ap.addFlagParameter("test")
-            .expectedArgumentCount(3)
+        ap.addOption("test")
+            .expectsArguments(3)
             .onArgument([&values](std::string_view argument) { values.push_back(std::string(argument)); });
 
         ap.parse(ParamCount, Params);
@@ -266,7 +268,7 @@ TEST_CASE("string parameter binding", "[argparser]")
         const char* Params[ParamCount] = { "--name", "christine" };
 
         std::string person;
-        ap.addParameter("name").bindString(&person);
+        ap.addOption("name").bindString(&person);
 
         ap.parse(ParamCount, Params);
 
@@ -286,7 +288,7 @@ TEST_CASE("int parameter binding", "[argparser]")
         const char* Params[ParamCount] = { "--favorite-number", "42" };
 
         int favoriteNumber = 0;
-        ap.addParameter("favorite-number").bindInt(&favoriteNumber);
+        ap.addOption("favorite-number").bindInt(&favoriteNumber);
 
         ap.parse(ParamCount, Params);
 

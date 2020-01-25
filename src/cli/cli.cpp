@@ -6,7 +6,7 @@
 #include <fstream>
 #include <cassert>
 
-using namespace Brainfreeze;
+using namespace Brainfreeze::ArgParsing;
 
 /**
  * Summons forth helpful version information along with licensing and
@@ -58,13 +58,13 @@ int unguardedMain(int argc, const char** argv)
     size_t cellCount = 30000;           // TODO: Use to configure interpreter.
     size_t blockSize = 1;               // TODO: Use to configure interpreter.
 
-    argparser.addFlagParameter("help").shortName('h').description("Show this help message and exit");
-    argparser.addFlagParameter("version").shortName('v').description("Show version information and exit");
-    argparser.addParameter("file").shortName('f').description("Path to Brainfreeze program")
+    argparser.addOption("help").shortName('h').description("Show this help message and exit");
+    argparser.addOption("version").shortName('v').description("Show version information and exit");
+    argparser.addOption("file").shortName('f').description("Path to Brainfreeze program")
         .bindString(&inputFilePath);  
-    argparser.addParameter("cells").description("Number of memory cells to allocate")
+    argparser.addOption("cells").description("Number of memory cells to allocate")
         .bindSize(&cellCount);
-    argparser.addParameter("blocksize").description("Size of each memory cell in bytes (1, 2 or 4)")
+    argparser.addOption("blocksize").description("Size of each memory cell in bytes (1, 2 or 4)")
         .bindSize(&blockSize);
 
     try
@@ -78,17 +78,17 @@ int unguardedMain(int argc, const char** argv)
         return EXIT_FAILURE;
     }
 
-    if (argparser.didParse("help"))
+    if (argparser.findOption("help").wasSet())
     {
         printHelp();
     }
-    else if (argparser.didParse("version"))
+    else if (argparser.findOption("version").wasSet())
     {
         printVersionInfo();
     }
-    else if (argparser.didParse("file"))
+    else if (argparser.findOption("file").wasSet())
     {
-        auto args = argparser.parameterArguments("file");
+        auto args = argparser.findOption("file").arguments();
         assert(args.size() == 1);
         
         // Load code from disk.

@@ -1,11 +1,12 @@
 // Copyright 2009-2020, Scott MacDonald.
 #include "argparser.h"
+#include "exceptions.h"
 
 #include <string>
 #include <stdexcept>
 #include <cassert>
 
-using namespace Brainfreeze;
+using namespace Brainfreeze::ArgParsing;
 
 // TODO: Handle shortnames.
 // TODO: Add parameter that can take all unbound arguments. Whenever the parser encounters an unbound argument (an
@@ -42,7 +43,7 @@ void ArgParser::parse(int argc, const char** argv)
         // TODO: Handle "--", "-", "---" cases
         if (argument.length() >= 2 && argument[0] == '-' && argument[1] == '-')
         {
-            // Remove the two front dashes before parsing it as a long parameter name.
+            // Remove the two front dashes before parsing it as a long option name.
             argument.erase(0, 2);
             parseLongName(argument);
         }
@@ -50,57 +51,37 @@ void ArgParser::parse(int argc, const char** argv)
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-void ArgParser::parseLongName(const std::string& parameterName)
+void ArgParser::parseLongName(const std::string& longName)
 {
-    // Find the parameter associated with this long name. If no argument is found throw an exception that an unknown
-    // parameter was passed.
-    auto paramItr = parameters_.find(parameterName);
+    auto& option = findOptionByLongName(longName);
 
-    if (paramItr == parameters_.end())
-    {
-        throw UnknownParameterLongNameException(parameterName, __FILE__, __LINE__);
-    }
-
-    auto& param = paramItr->second;
-    assert(param != nullptr);
-
-    // TODO: Handle if the parameter was specified multiple times.
-
+    // TODO: Handle if this option was specified multiple times.
     // Mark the parameter as being present.
-    param->isSet = true;
+    option.markSet(true);
 
-    // If there is a callback for the parameter invoke it now (before reading arguments).
-    if (param->onParam)
-    {
-        param->onParam();
-    }
+    // Invoke any callbacks associated with parsing this option.
+    option.invokeOnParsed();
 
-    // Are there parameters associated with this?
-    if (param->expectedArgumentCount > 0)
+    // TODO: Make sure this is a valid option argument (no short/long names).
+
+    // Read expected arguments from the remaining unparsed arguments.
+    // TODO: Handle optional arguments.
+    while (option.expectsMoreArguments())
     {
-        // Read as many of the expected arguments as possible.
-        // TODO: Handle optional arguments.
-        while (param->arguments.size() < param->expectedArgumentCount)
+        // Make sure there is another argument to read.
+        if (nextArgIndex_ >= argsToParse_.size())
         {
-            // Make sure there is another argument to read.
-            if (nextArgIndex_ >= argsToParse_.size())
-            {
-                throw ExpectedParameterArgumentMissingException(
-                    parameterName,
-                    param->expectedArgumentCount - param->arguments.size() - 1,
-                    param->expectedArgumentCount,
-                    __FILE__, __LINE__);
-            }
-
-            // TODO: Make sure this is a valid parameter argument (no short/long names).
-            param->arguments.push_back(argsToParse_[nextArgIndex_++]);
-
-            // Invoke a callback if one was given.
-            if (param->onArgument)
-            {
-                param->onArgument(param->arguments.back());
-            }
+            throw ExpectedArgumentMissingException(
+                longName,
+                option.argumentCount(),
+                option.desc().expectedArgumentCount(),
+                __FILE__, __LINE__);
         }
+
+        // Add the next argument to the current option.
+        // TODO: Check the next argument is "valid" (eg doesn't have - or --, etc)
+        // TODO: Handle strings (is that here or somewhere else?)
+        option.addArgument(argsToParse_[nextArgIndex_++]);
     }
 
     // TODO: Handle action associated with argument.
@@ -110,61 +91,34 @@ void ArgParser::parseLongName(const std::string& parameterName)
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-ParameterBuilder ArgParser::addFlagParameter(const std::string& parameterName)
+OptionBuilder ArgParser::addOption(const std::string& optionName)
 {
-    // TODO: Handle duplicates.
-    // TODO: Handle empty longName.
-    parameters_[parameterName] = std::make_unique<parameter_t>();
-    return ParameterBuilder(parameters_[parameterName].get())
-        .longName(parameterName)
-        .isFlag(true);
+    return OptionBuilder(optionName, optionName, *this);
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-bool ArgParser::didParse(const std::string& longName) const
+void ArgParser::registerOption(const std::string& name, const OptionDesc& desc)
 {
-    auto paramItr = parameters_.find(longName);
+    // TODO: Throw exception if name already added.
+    assert(options_.find(name) == options_.end());
+    assert(desc.hasLongName());
 
-    if (paramItr != parameters_.end())
+    // Add the option and then register it in look up tables.
+    options_[name] = std::make_unique<OptionState>(desc);
+
+    if (desc.hasShortName())
     {
-        assert(paramItr->second != nullptr);
-        return paramItr->second->isSet;
+        // TODO: Throw an exception.
+        assert(shortNameToOptionLUT_.find(desc.shortName()) == shortNameToOptionLUT_.end());
+        shortNameToOptionLUT_[desc.shortName()] = name;
     }
 
-    return false;
-}
-
-//---------------------------------------------------------------------------------------------------------------------
-bool ArgParser::isFlagSet(const std::string& flagName) const
-{
-    // TODO: Eliminate?
-    return didParse(flagName);
-}
-
-//---------------------------------------------------------------------------------------------------------------------
-ParameterBuilder ArgParser::addParameter(const std::string& parameterName)
-{
-    // TODO: Handle duplicates.
-    // TODO: Handle empty longName.
-    // TODO: This is duplicated work from addFlag.
-    parameters_[parameterName] = std::make_unique<parameter_t>();
-    return ParameterBuilder(parameters_[parameterName].get())
-        .longName(parameterName)
-        .expectedArgumentCount(1);
-}
-
-//---------------------------------------------------------------------------------------------------------------------
-const std::vector<std::string>& ArgParser::parameterArguments(const std::string& parameterName) const
-{
-    auto paramItr = parameters_.find(parameterName);
-
-    if (paramItr == parameters_.end())
+    if (desc.hasLongName())
     {
-        throw std::runtime_error("Could not find a parameter with the name " + parameterName);
+        // TODO: Throw an exception.
+        assert(longNameToOptionLUT_.find(desc.longName()) == longNameToOptionLUT_.end());
+        longNameToOptionLUT_[desc.longName()] = name;
     }
-
-    assert(paramItr->second != nullptr);
-    return paramItr->second->arguments;
 }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -191,4 +145,118 @@ std::vector<std::string> ArgParser::ArgcvToVector(int argc, const char** argv)
     }
 
     return args;
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+const OptionState& ArgParser::findOption(const std::string& optionName) const
+{
+    const OptionState* optionState = nullptr;
+
+    if (!tryFindOption(optionName, &optionState))
+    {
+        throw UnknownOptionNameException(optionName, __FILE__, __LINE__);
+    }
+
+    assert(optionState != nullptr);
+    return *optionState;
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+bool ArgParser::tryFindOption(
+    const std::string& optionName,
+    const OptionState** optionState) const
+{
+    auto optionItr = options_.find(optionName);
+
+    if (optionItr != options_.end())
+    {
+        if (optionState != nullptr)
+        {
+            *optionState = optionItr->second.get();
+        }
+
+        return true;
+    }
+
+    return false;
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+bool ArgParser::tryFindOption(
+    const std::string& optionName,
+    OptionState** optionState)
+{
+    auto optionItr = options_.find(optionName);
+
+    if (optionItr != options_.end())
+    {
+        if (optionState != nullptr)
+        {
+            *optionState = optionItr->second.get();
+        }
+
+        return true;
+    }
+
+    return false;
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+bool ArgParser::tryFindOptionByLongName(
+    const std::string& longName,
+    const OptionState** optionState) const
+{
+    auto optNameItr = longNameToOptionLUT_.find(longName);
+
+    if (optNameItr != longNameToOptionLUT_.end())
+    {
+        auto optionName = optNameItr->second;
+        return tryFindOption(optionName, optionState);
+    }
+
+    return false;
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+bool ArgParser::tryFindOptionByLongName(
+    const std::string& longName,
+    OptionState** optionState)
+{
+    auto optNameItr = longNameToOptionLUT_.find(longName);
+
+    if (optNameItr != longNameToOptionLUT_.end())
+    {
+        auto optionName = optNameItr->second;
+        return tryFindOption(optionName, optionState);
+    }
+
+    return false;
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+const OptionState& ArgParser::findOptionByLongName(const std::string& longName) const
+{
+    const OptionState* optionState = nullptr;
+
+    if (!tryFindOptionByLongName(longName, &optionState))
+    {
+        throw UnknownLongNameException(longName, __FILE__, __LINE__);
+    }
+
+    assert(optionState != nullptr);
+    return *optionState;
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+OptionState& ArgParser::findOptionByLongName(const std::string& longName)
+{
+    OptionState* optionState = nullptr;
+
+    if (!tryFindOptionByLongName(longName, &optionState))
+    {
+        throw UnknownLongNameException(longName, __FILE__, __LINE__);
+    }
+
+    assert(optionState != nullptr);
+    return *optionState;
 }
