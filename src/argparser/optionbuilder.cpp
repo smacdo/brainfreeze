@@ -11,6 +11,7 @@ using namespace Brainfreeze::ArgParsing;
 //---------------------------------------------------------------------------------------------------------------------
 OptionBuilder::OptionBuilder(std::string name, std::string longNameIn, ArgParser& parent)
     : parent_(parent),
+      desc_(name),
       name_(name)
 {
     assert(name_.size() > 0);

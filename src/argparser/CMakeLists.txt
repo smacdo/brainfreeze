@@ -5,6 +5,7 @@ set(SOURCES
 	argparser/argparser.h
 	argparser_impl.h
 	argparser.cpp
+	argparserresults.cpp
 	exceptions.h
 	exceptions.cpp
 	optionbuilder.cpp

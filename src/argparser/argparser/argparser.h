@@ -13,6 +13,7 @@ namespace Brainfreeze::ArgParsing
     using parsed_callback_t = std::function<void(void)>;
     using argument_callback_t = std::function<void(const std::string&)>;
 
+    class ArgParserResults;
     class OptionBuilder;
     class OptionDesc;
     class OptionState;
@@ -22,40 +23,32 @@ namespace Brainfreeze::ArgParsing
     {
     public:
         /** Parse the given command line arguments. */
-        // TODO: I think the results of parsing should be returned as a result object instead of stored in the
-        //       ArgParser as state.
-        void parse(int argc, const char** argv);
+        std::unique_ptr<ArgParserResults> parse(
+            int argc,                               ///< Number of arguments to parse.
+            const char** argv,                      ///< Pointer to an array of c-style strings to parse.
+            bool extractProgramName = true);        ///< True if first argument is program name, false otherwise.
 
         /** Parse the given command line arguments. */
-        void parse(const std::vector<const std::string>& args);
+        std::unique_ptr<ArgParserResults> parse(
+            const std::vector<std::string>& args,   ///< List of arguments to parse.
+            bool extractProgramName = true);        ///< True if first argument is program name, false otherwise.
 
         /** Adds an option to the parser and returns a builder to further configure the option. */
-        OptionBuilder addOption(const std::string& optionName);
+        OptionBuilder addOption(
+            const std::string& optionName);         ///< Name of the option.
 
-        void registerOption(const std::string& name, const OptionDesc& desc);
+        /** Manually registers a new option with the parser. Most callers should use addOption. */
+        void registerOption(
+            const std::string& name,                ///< Name of the option.
+            const OptionDesc& desc);                ///< Option configuration.
 
-    public:
-
-        /** Get an option by name. */
-        // TODO: Move this to a results object returned by parse.
-        const OptionState& findOption(const std::string& optionName) const;
-
-    public:
         /** Convert the traditional argc/argv parameters to a list of strings. */
-        static std::vector<std::string> ArgcvToVector(int argc, const char** argv);
+        static std::vector<std::string> ArgcvToVector(
+            int argc,                               ///< Number of arguments to parse.
+            const char** argv);                     ///< Pointer to an array of c-style strings to parse.
 
     private:
         void parseLongName(const std::string& longName);
-
-        /** Try to find an option by name. */
-        bool tryFindOption(
-            const std::string& optionName,
-            const OptionState** optionState) const;
-
-        /** Try to find an option by name. */
-        bool tryFindOption(
-            const std::string& optionName,
-            OptionState** optionState);
 
         /** Try to find option state by long name. */
         bool tryFindOptionByLongName(
@@ -74,20 +67,64 @@ namespace Brainfreeze::ArgParsing
         OptionState& findOptionByLongName(const std::string& longName);
 
     private:
-        // Table of configured options, keyed by name.
-        std::unordered_map<std::string, std::unique_ptr<OptionState>> options_;
+        std::unordered_map<std::string, OptionDesc> options_;
         std::unordered_map<std::string, std::string> longNameToOptionLUT_;
         std::unordered_map<char, std::string> shortNameToOptionLUT_;
+        std::unique_ptr<ArgParserResults> results_;
 
         std::vector<std::string> argsToParse_;
         size_t nextArgIndex_ = 0;
+    };
 
+    /** Holds the results of parsing a command line. */
+    class ArgParserResults
+    {
+        friend class ArgParser;
+
+    public:
+        ArgParserResults(const std::unordered_map<std::string, OptionDesc>& options);
+
+        // TODO: Add index operator overload to find option by name.
+
+        /** Get an option by name. */
+        const OptionState& option(const std::string& optionName) const;
+
+        /** Get the program name that was passed on the command line. */
+        const std::string& programName() const;
+
+    private:
+        /** Set program name (only from the arg parser). */
+        void setProgramName(const std::string& name);
+
+    private:
+        /** Helper function to add option. */
+        void initOption(const OptionDesc& option);
+
+        /** Try to find an option by name. */
+        bool tryFindOption(
+            const std::string& optionName,
+            const OptionState** optionState) const;
+
+        /** Try to find an option by name. */
+        bool tryFindOption(
+            const std::string& optionName,
+            OptionState** optionState);
+
+    private:
+        std::unordered_map<std::string, std::unique_ptr<OptionState>> options_;
+        std::string programName_;
     };
 
     /** Holds information for an option supported by the argparser. */
     class OptionDesc
     {
     public:
+        OptionDesc(const std::string& name)
+            : name_(name)
+        {
+        }
+
+        const std::string& name() const { return name_; }
 
         /**
          * Get the shortname for this option. If no short name was assigned this method will
@@ -147,6 +184,7 @@ namespace Brainfreeze::ArgParsing
         void setOnArgument(argument_callback_t&& callback) { onArgument_ = std::move(callback); }
 
     private:
+        std::string name_;
         char shortName_ = '\0';
         std::string longName_;
         std::string description_;

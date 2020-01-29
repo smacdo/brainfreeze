@@ -24,12 +24,34 @@ using namespace Brainfreeze::ArgParsing;
 // TODO: Allow/disallow parameter being specified more than once.
 
 //---------------------------------------------------------------------------------------------------------------------
-void ArgParser::parse(int argc, const char** argv)
+std::unique_ptr<ArgParserResults> ArgParser::parse(
+    int argc,
+    const char** argv,
+    bool extractProgramName)
 {
-    // TODO: Handle argv[0] being the program name which will break the unit tests.
-    argsToParse_ = ArgcvToVector(argc, argv);
+    return parse(ArgcvToVector(argc, argv), extractProgramName);
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+std::unique_ptr<ArgParserResults> ArgParser::parse(
+    const std::vector<std::string>& args,
+    bool extractProgramName)
+{
+    argsToParse_ = args;
+
+    results_.reset(new ArgParserResults(options_));
     nextArgIndex_ = 0;
 
+    // The first argument is always the name of the program that is running. Extract and save this value if it was
+    // provided.
+    // TODO: TEST
+    if (argsToParse_.size() > 0 && extractProgramName)
+    {
+        results_->setProgramName(argsToParse_[0]);
+        nextArgIndex_ = 1;
+    }
+
+    // Parse the remainder of the arguments.
     auto argIndex = nextArgIndex_;
 
     while (nextArgIndex_ < argsToParse_.size())
@@ -47,7 +69,20 @@ void ArgParser::parse(int argc, const char** argv)
             argument.erase(0, 2);
             parseLongName(argument);
         }
+        else if (argument.length() >= 1 && argument[0] == '-')
+        {
+            // TODO: Handle this as an exception.
+            assert(argument.length() == 2 && "must be valid shortname option format");
+            assert(false && "TODO: handle shortnames");
+        }
+        else
+        {
+            // TODO: Handle loose arguments.
+            assert(false && "TODO: handle loose arguments");
+        }
     }
+
+    return std::move(results_);
 }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -104,7 +139,7 @@ void ArgParser::registerOption(const std::string& name, const OptionDesc& desc)
     assert(desc.hasLongName());
 
     // Add the option and then register it in look up tables.
-    options_[name] = std::make_unique<OptionState>(desc);
+    options_.insert({ name, desc });
 
     if (desc.hasShortName())
     {
@@ -148,60 +183,6 @@ std::vector<std::string> ArgParser::ArgcvToVector(int argc, const char** argv)
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-const OptionState& ArgParser::findOption(const std::string& optionName) const
-{
-    const OptionState* optionState = nullptr;
-
-    if (!tryFindOption(optionName, &optionState))
-    {
-        throw UnknownOptionNameException(optionName, __FILE__, __LINE__);
-    }
-
-    assert(optionState != nullptr);
-    return *optionState;
-}
-
-//---------------------------------------------------------------------------------------------------------------------
-bool ArgParser::tryFindOption(
-    const std::string& optionName,
-    const OptionState** optionState) const
-{
-    auto optionItr = options_.find(optionName);
-
-    if (optionItr != options_.end())
-    {
-        if (optionState != nullptr)
-        {
-            *optionState = optionItr->second.get();
-        }
-
-        return true;
-    }
-
-    return false;
-}
-
-//---------------------------------------------------------------------------------------------------------------------
-bool ArgParser::tryFindOption(
-    const std::string& optionName,
-    OptionState** optionState)
-{
-    auto optionItr = options_.find(optionName);
-
-    if (optionItr != options_.end())
-    {
-        if (optionState != nullptr)
-        {
-            *optionState = optionItr->second.get();
-        }
-
-        return true;
-    }
-
-    return false;
-}
-
-//---------------------------------------------------------------------------------------------------------------------
 bool ArgParser::tryFindOptionByLongName(
     const std::string& longName,
     const OptionState** optionState) const
@@ -211,7 +192,7 @@ bool ArgParser::tryFindOptionByLongName(
     if (optNameItr != longNameToOptionLUT_.end())
     {
         auto optionName = optNameItr->second;
-        return tryFindOption(optionName, optionState);
+        return results_->tryFindOption(optionName, optionState);
     }
 
     return false;
@@ -227,7 +208,7 @@ bool ArgParser::tryFindOptionByLongName(
     if (optNameItr != longNameToOptionLUT_.end())
     {
         auto optionName = optNameItr->second;
-        return tryFindOption(optionName, optionState);
+        return results_->tryFindOption(optionName, optionState);
     }
 
     return false;
