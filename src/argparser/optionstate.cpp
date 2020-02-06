@@ -62,3 +62,12 @@ const std::vector<std::string>& OptionState::arguments() const
 {
     return arguments_;
 }
+
+//---------------------------------------------------------------------------------------------------------------------
+const std::string& OptionState::argumentValue() const
+{
+    assert(argumentCount() > 0);
+    assert(arguments_.size() > 0);
+
+    return arguments_[0];
+}

@@ -142,10 +142,19 @@ TEST_CASE("can specify a parameter that takes one string argument", "[argparser]
     ap.addOption("filename").expectsArguments(1);
     auto r = ap.parse(ParamCount, Params);
 
-    auto args = r->option("filename").arguments();
-    
-    REQUIRE(1 == args.size());
-    REQUIRE("test1.txt" == args[0]);
+    SECTION("get options via arguments method")
+    {
+        auto args = r->option("filename").arguments();
+
+        REQUIRE(1 == args.size());
+        REQUIRE("test1.txt" == args[0]);
+    }
+
+    SECTION("get options via argumentValue method")
+    {
+        auto fileName = r->option("filename").argumentValue();
+        REQUIRE("test1.txt" == fileName);
+    }
 }
 
 TEST_CASE("can specify a parameter that takes three string arguments", "[argparser]")

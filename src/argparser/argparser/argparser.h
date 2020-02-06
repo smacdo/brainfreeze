@@ -228,8 +228,11 @@ namespace Brainfreeze::ArgParsing
         /** Add an argument to the option. */
         void addArgument(const std::string& argument);
 
-        /** Get the arguments associated with this argument. */
+        /** Get the arguments associated with this option. */
         const std::vector<std::string>& arguments() const;
+
+        /** Get the first argument associated with this option. */
+        const std::string& argumentValue() const;
 
     private:
         OptionDesc desc_;

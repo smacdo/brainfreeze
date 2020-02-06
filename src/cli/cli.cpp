@@ -58,51 +58,52 @@ int unguardedMain(int argc, const char** argv)
     size_t cellCount = 30000;           // TODO: Use to configure interpreter.
     size_t blockSize = 1;               // TODO: Use to configure interpreter.
 
-    argparser.addOption("help").shortName('h').description("Show this help message and exit");
-    argparser.addOption("version").shortName('v').description("Show version information and exit");
-    argparser.addOption("file").shortName('f').description("Path to Brainfreeze program")
-        .bindString(&inputFilePath);  
-    argparser.addOption("cells").description("Number of memory cells to allocate")
-        .bindSize(&cellCount);
-    argparser.addOption("blocksize").description("Size of each memory cell in bytes (1, 2 or 4)")
-        .bindSize(&blockSize);
-
     try
     {
-        argparser.parse(argc, argv);
+        // Parse command line options.
+        argparser.addOption("help").shortName('h').description("Show this help message and exit");
+        argparser.addOption("version").shortName('v').description("Show version information and exit");
+        argparser.addOption("file").shortName('f').description("Path to Brainfreeze program")
+            .bindString(&inputFilePath);
+        argparser.addOption("cells").description("Number of memory cells to allocate")
+            .bindSize(&cellCount);
+        argparser.addOption("blocksize").description("Size of each memory cell in bytes (1, 2 or 4)")
+            .bindSize(&blockSize);
+
+        auto args = argparser.parse(argc, argv);
+
+        // Execute depending on command line options.
+        if (args->option("help").wasSet())
+        {
+            printHelp();
+        }
+        else if (args->option("version").wasSet())
+        {
+            printVersionInfo();
+        }
+        else if (args->option("file").wasSet())
+        {
+            auto scriptFilePath = args->option("file").argumentValue();
+
+            // Load code from disk.
+            // TODO: Manually load the code, and then configure the compiler instead of this oneshot function.
+            // TODO: Configure interpeter with command line options.
+            // TODO: Print an error if code failed to load.
+            // TODO: Print errors from code along with line/column and highlighting.
+            auto interpreter = Brainfreeze::Helpers::LoadFromDisk(scriptFilePath);
+            interpreter->run();
+        }
+        else
+        {
+            std::cerr << "No action or program given" << std::endl;
+            printHelp();
+        }
     }
     catch (const ArgParserException & e)
     {
         std::cerr << e.message() << std::endl;
         printHelp();
         return EXIT_FAILURE;
-    }
-
-    if (argparser.findOption("help").wasSet())
-    {
-        printHelp();
-    }
-    else if (argparser.findOption("version").wasSet())
-    {
-        printVersionInfo();
-    }
-    else if (argparser.findOption("file").wasSet())
-    {
-        auto args = argparser.findOption("file").arguments();
-        assert(args.size() == 1);
-        
-        // Load code from disk.
-        // TODO: Manually load the code, and then configure the compiler instead of this oneshot function.
-        // TODO: Configure interpeter with command line options.
-        // TODO: Print an error if code failed to load.
-        // TODO: Print errors from code along with line/column and highlighting.
-        auto interpreter = Brainfreeze::Helpers::LoadFromDisk(args[0]);
-        interpreter->run();
-    }
-    else
-    {
-        std::cerr << "No action or program given" << std::endl;
-        printHelp();
     }
 
     return EXIT_SUCCESS;
