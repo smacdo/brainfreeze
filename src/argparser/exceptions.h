@@ -41,6 +41,18 @@ namespace Brainfreeze::ArgParsing
         static std::string format(const std::string& longName);
     };
 
+    class UnknownShortNameException : public ArgParserException
+    {
+    public:
+        explicit UnknownShortNameException(
+            char shortName,
+            const char* fileName = nullptr,
+            size_t lineNumber = 0);
+
+    private:
+        static std::string format(char shortName);
+    };
+
     class ExpectedArgumentMissingException : public ArgParserException
     {
     public:

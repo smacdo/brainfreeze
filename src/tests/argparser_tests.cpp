@@ -64,7 +64,7 @@ TEST_CASE("extract program name from first argument on command line", "[argparse
     }
 }
 
-TEST_CASE("test if a simple flag was set", "[argparser]")
+TEST_CASE("test if a simple flag was set with long names", "[argparser]")
 {
     ArgParser ap;
     ap.addOption("help");
@@ -130,6 +130,90 @@ TEST_CASE("an exception is thrown if an argument is not listed as a flag", "[arg
     const char* Params[ParamCount] = { "myapp", "--foobar" };
 
     REQUIRE_THROWS_AS([&]() { ap.parse(ParamCount, Params); }(), UnknownLongNameException);
+}
+
+TEST_CASE("test if a flag was set with short names", "[argparser]")
+{
+    ArgParser ap;
+    ap.addOption("help").shortName('h');
+    ap.addOption("version").shortName('v');
+    ap.addOption("force").shortName('F');
+
+    SECTION("can test if single option (help) is set")
+    {
+        const int ParamCount = 2;
+        const char* Params[ParamCount] = { "myapp", "-v" };
+
+        auto r = ap.parse(ParamCount, Params);
+
+        REQUIRE_FALSE(r->option("help").wasSet());
+        REQUIRE(r->option("version").wasSet());
+        REQUIRE_FALSE(r->option("force").wasSet());
+    }
+
+    SECTION("can test if single option (force) is set")
+    {
+        const int ParamCount = 2;
+        const char* Params[ParamCount] = { "myapp", "-F" };
+
+        auto r = ap.parse(ParamCount, Params);
+
+        REQUIRE_FALSE(r->option("help").wasSet());
+        REQUIRE_FALSE(r->option("version").wasSet());
+        REQUIRE(r->option("force").wasSet());
+    }
+
+    SECTION("can test if multiple options are set (one per argument)")
+    {
+        const int ParamCount = 4;
+        const char* Params[ParamCount] = { "myapp", "-v", "-F", "-h" };
+
+        auto a = ap.parse(2, Params);
+
+        REQUIRE_FALSE(a->option("help").wasSet());
+        REQUIRE(a->option("version").wasSet());
+        REQUIRE_FALSE(a->option("force").wasSet());
+
+        auto b = ap.parse(3, Params);
+
+        REQUIRE_FALSE(b->option("help").wasSet());
+        REQUIRE(b->option("version").wasSet());
+        REQUIRE(b->option("force").wasSet());
+
+        auto c = ap.parse(4, Params);
+
+        REQUIRE(c->option("help").wasSet());
+        REQUIRE(c->option("version").wasSet());
+        REQUIRE(c->option("force").wasSet());
+    }
+}
+
+// TODO: -vf
+// TODO: -vfx [argument]
+// TODO: -vxy [argument] where x and y except argument => EXCEPTION
+// TODO: -vxf [argument] where x expect argument => EXCEPTION
+TEST_CASE("an exception is thrown if a short name is not registered", "[argparser]")
+{
+    ArgParser ap;
+    ap.addOption("help").shortName('h');
+    ap.addOption("version").shortName('v');
+    ap.addOption("force").shortName('F');
+
+    SECTION("for lowercase force")
+    {
+        const int ParamCount = 2;
+        const char* Params[ParamCount] = { "myapp", "-f" };
+
+        REQUIRE_THROWS_AS([&]() { ap.parse(ParamCount, Params); }(), UnknownShortNameException);
+    }
+
+    SECTION("for non-registered char")
+    {
+        const int ParamCount = 2;
+        const char* Params[ParamCount] = { "myapp", "-x" };
+
+        REQUIRE_THROWS_AS([&]() { ap.parse(ParamCount, Params); }(), UnknownShortNameException);
+    }
 }
 
 TEST_CASE("can specify a parameter that takes one string argument", "[argparser]")

@@ -48,7 +48,8 @@ namespace Brainfreeze::ArgParsing
             const char** argv);                     ///< Pointer to an array of c-style strings to parse.
 
     private:
-        void parseLongName(const std::string& longName);
+        void parseLongName(const std::string& argument);       // TODO: Should be string_view.
+        void parseShortNameGroup(const std::string& argument); // TODO: Should be string_view.      
 
         /** Try to find option state by long name. */
         bool tryFindOptionByLongName(
@@ -65,6 +66,22 @@ namespace Brainfreeze::ArgParsing
         
         /** Get option state by long name. */
         OptionState& findOptionByLongName(const std::string& longName);
+
+        /** Try to find option state by short name. */
+        bool tryFindOptionByShortName(
+            char shortName,
+            const OptionState** optionState) const;
+
+        /** Try to find option state by short name. */
+        bool tryFindOptionByShortName(
+            char shortName,
+            OptionState** optionState);
+
+        /** Get option state by short name. */
+        const OptionState& findOptionByShortName(char shortName) const;
+
+        /** Get option state by short name. */
+        OptionState& findOptionByShortName(char shortName);
 
     private:
         std::unordered_map<std::string, OptionDesc> options_;

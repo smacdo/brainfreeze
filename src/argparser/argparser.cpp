@@ -71,9 +71,9 @@ std::unique_ptr<ArgParserResults> ArgParser::parse(
         }
         else if (argument.length() >= 1 && argument[0] == '-')
         {
-            // TODO: Handle this as an exception.
-            assert(argument.length() == 2 && "must be valid shortname option format");
-            assert(false && "TODO: handle shortnames");
+            // Remove the front dash before parsing it as a short name option.
+            argument.erase(0, 1);
+            parseShortNameGroup(argument);
         }
         else
         {
@@ -126,6 +126,26 @@ void ArgParser::parseLongName(const std::string& longName)
 }
 
 //---------------------------------------------------------------------------------------------------------------------
+void ArgParser::parseShortNameGroup(const std::string& argument)
+{
+    // Read each character in the argument as a potential option.
+    for (size_t i = 0; i < argument.size(); ++i)
+    {
+        auto c = argument[i];
+
+        // Look up the option named by the shortname, mark it as set and invoke any callback associated with the
+        // option.
+        auto& option = findOptionByShortName(c);
+
+        option.markSet(true);
+        option.invokeOnParsed();
+
+        // TODO: Handle options with parameters.
+        // TODO: Only allow one option with a paremeter and it has to be the last option in the group.
+    }
+}
+
+//---------------------------------------------------------------------------------------------------------------------
 OptionBuilder ArgParser::addOption(const std::string& optionName)
 {
     return OptionBuilder(optionName, optionName, *this);
@@ -144,14 +164,14 @@ void ArgParser::registerOption(const std::string& name, const OptionDesc& desc)
     if (desc.hasShortName())
     {
         // TODO: Throw an exception.
-        assert(shortNameToOptionLUT_.find(desc.shortName()) == shortNameToOptionLUT_.end());
+        assert(shortNameToOptionLUT_.find(desc.shortName()) == shortNameToOptionLUT_.end() && "Duplicate short name");
         shortNameToOptionLUT_[desc.shortName()] = name;
     }
 
     if (desc.hasLongName())
     {
         // TODO: Throw an exception.
-        assert(longNameToOptionLUT_.find(desc.longName()) == longNameToOptionLUT_.end());
+        assert(longNameToOptionLUT_.find(desc.longName()) == longNameToOptionLUT_.end() && "Duplicate long name");
         longNameToOptionLUT_[desc.longName()] = name;
     }
 }
@@ -236,6 +256,66 @@ OptionState& ArgParser::findOptionByLongName(const std::string& longName)
     if (!tryFindOptionByLongName(longName, &optionState))
     {
         throw UnknownLongNameException(longName, __FILE__, __LINE__);
+    }
+
+    assert(optionState != nullptr);
+    return *optionState;
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+bool ArgParser::tryFindOptionByShortName(
+    char shortName,
+    const OptionState** optionState) const
+{
+    auto optNameItr = shortNameToOptionLUT_.find(shortName);
+
+    if (optNameItr != shortNameToOptionLUT_.end())
+    {
+        auto optionName = optNameItr->second;
+        return results_->tryFindOption(optionName, optionState);
+    }
+
+    return false;
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+bool ArgParser::tryFindOptionByShortName(
+    char shortName,
+    OptionState** optionState)
+{
+    auto optNameItr = shortNameToOptionLUT_.find(shortName);
+
+    if (optNameItr != shortNameToOptionLUT_.end())
+    {
+        auto optionName = optNameItr->second;
+        return results_->tryFindOption(optionName, optionState);
+    }
+
+    return false;
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+const OptionState& ArgParser::findOptionByShortName(char shortName) const
+{
+    const OptionState* optionState = nullptr;
+
+    if (!tryFindOptionByShortName(shortName, &optionState))
+    {
+        throw UnknownShortNameException(shortName, __FILE__, __LINE__);
+    }
+
+    assert(optionState != nullptr);
+    return *optionState;
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+OptionState& ArgParser::findOptionByShortName(char shortName)
+{
+    OptionState* optionState = nullptr;
+
+    if (!tryFindOptionByShortName(shortName, &optionState))
+    {
+        throw UnknownShortNameException(shortName, __FILE__, __LINE__);
     }
 
     assert(optionState != nullptr);

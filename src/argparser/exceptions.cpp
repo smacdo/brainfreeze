@@ -78,6 +78,23 @@ std::string UnknownLongNameException::format(const std::string& longName)
 }
 
 //=====================================================================================================================
+UnknownShortNameException::UnknownShortNameException(
+    char shortName,
+    const char* fileName,
+    size_t lineNumber)
+    : ArgParserException(format(shortName), fileName, lineNumber)
+{
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+std::string UnknownShortNameException::format(char shortName)
+{
+    std::stringstream ss;
+    ss << "Unrecogonized option '" << shortName << "'";
+    return ss.str();
+}
+
+//=====================================================================================================================
 UnknownOptionNameException::UnknownOptionNameException(
     const std::string& optionName,
     const char* fileName,
