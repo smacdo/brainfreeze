@@ -49,6 +49,13 @@ OptionBuilder& OptionBuilder::description(const std::string& description)
 }
 
 //---------------------------------------------------------------------------------------------------------------------
+OptionBuilder& OptionBuilder::required(bool isRequired)
+{
+    desc_.setRequired(isRequired);
+    return *this;
+}
+
+//---------------------------------------------------------------------------------------------------------------------
 OptionBuilder& OptionBuilder::expectsArgument()
 {
     return expectsArguments(1);

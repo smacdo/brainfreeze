@@ -125,6 +125,9 @@ namespace Brainfreeze::ArgParsing
 
         /** Get the program name that was passed on the command line. */
         const std::string& programName() const;
+        
+        /** Check that all results of parsing command line arguments was OK. */
+        void validate() const;
 
     private:
         /** Set program name (only from the arg parser). */
@@ -188,6 +191,12 @@ namespace Brainfreeze::ArgParsing
         /** Set the description for this option. */
         void setDescription(const std::string& description) { description_ = description; }
 
+        /** Get if option is required to be set. */
+        bool isRequired() const { return required_; }
+
+        /** Set if option is required to be set. */
+        void setRequired(bool isRequired) { required_ = isRequired; }
+
         /** Get if this option accepts an unbound positional parameter. */
         bool isPositional() const;
 
@@ -232,6 +241,7 @@ namespace Brainfreeze::ArgParsing
         char shortName_ = '\0';
         std::string longName_;
         std::string description_;
+        bool required_ = false;
 
         std::optional<std::size_t> positionalIndex_;
         std::optional<std::size_t> expectedArgumentCount_;
@@ -295,6 +305,7 @@ namespace Brainfreeze::ArgParsing
         OptionBuilder& shortName(char shortName);
         OptionBuilder& longName(const std::string& longName);
         OptionBuilder& description(const std::string& description);
+        OptionBuilder& required(bool isRequired = true);
         OptionBuilder& positional();
         OptionBuilder& positional(size_t expectedIndex);
         OptionBuilder& onParsed(parsed_callback_t&& callback);

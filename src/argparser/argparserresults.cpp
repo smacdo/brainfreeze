@@ -90,3 +90,20 @@ void ArgParserResults::setProgramName(const std::string& name)
 {
     programName_ = name;
 }
+
+//---------------------------------------------------------------------------------------------------------------------
+void ArgParserResults::validate() const
+{
+    for (const auto& kvp : options_)
+    {
+        const auto& option = kvp.second;
+
+        // Check that required options were parsed.
+        if (option->desc().isRequired() && !option->wasSet())
+        {
+            throw RequiredOptionMissingException(option->desc().name(), __FILE__, __LINE__);
+        }
+
+        // TODO: Make sure expected argument counts are correct.
+    }
+}

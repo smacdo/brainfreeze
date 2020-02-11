@@ -66,6 +66,7 @@ int unguardedMain(int argc, const char** argv)
         argparser.addOption("version").shortName('v')
             .description("Show version information and exit");
         argparser.addOption("file").shortName('f')
+            .required()
             .expectsString(&inputFilePath)
             .positional()
             .description("Path to Brainfreeze program");

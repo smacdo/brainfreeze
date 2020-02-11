@@ -87,6 +87,9 @@ std::unique_ptr<ArgParserResults> ArgParser::parse(
         }
     }
 
+    // Post parse validation checking. Verify required options are present, expected argument counts match, etc
+    // before returning the results.
+    results_->validate();
     return std::move(results_);
 }
 

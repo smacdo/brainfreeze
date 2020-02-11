@@ -69,4 +69,16 @@ namespace Brainfreeze::ArgParsing
             size_t argumentIndex,
             size_t totalExpectedArguments);
     };
+
+    class RequiredOptionMissingException : public ArgParserException
+    {
+    public:
+        explicit RequiredOptionMissingException(
+            const std::string& optionName,
+            const char* fileName = nullptr,
+            size_t lineNumber = 0);
+
+    private:
+        static std::string format(const std::string& optionName);
+    };
 }

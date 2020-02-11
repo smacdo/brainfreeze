@@ -516,6 +516,25 @@ TEST_CASE("int parameter binding", "[argparser]")
     // TODO: Test exception when binding to multiple expected arguments.
 }
 
+
+TEST_CASE("required options", "[argparser]")
+{
+    ArgParser ap;
+
+    SECTION("missing required option throws exception if not present")
+    {
+        const int ParamCount = 2;
+        const char* Params[ParamCount] = { "myapp", "--hello" };
+
+        ap.addOption("hello").required();
+
+        REQUIRE_NOTHROW([&]() { ap.parse(ParamCount, Params - 1); }());
+        REQUIRE_THROWS_AS([&]() { ap.parse(ParamCount - 1, Params); }(), RequiredOptionMissingException);
+    }
+
+    // TODO: Test exception when binding to multiple expected arguments.
+}
+
 // TODO: Test size_t binding.
 
 // TODO: Exception with no arguments.

@@ -142,3 +142,20 @@ std::string ExpectedArgumentMissingException::format(
 
     return ss.str();
 }
+
+//=====================================================================================================================
+RequiredOptionMissingException::RequiredOptionMissingException(
+    const std::string& optionName,
+    const char* fileName,
+    size_t lineNumber)
+    : ArgParserException(format(optionName), fileName, lineNumber)
+{
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+std::string RequiredOptionMissingException::format(const std::string& optionName)
+{
+    std::stringstream ss;
+    ss << "Missing requird option '" << optionName << "'" << std::endl;
+    return ss.str();
+}
