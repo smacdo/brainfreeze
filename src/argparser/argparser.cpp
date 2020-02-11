@@ -3,8 +3,10 @@
 #include "exceptions.h"
 
 #include <string>
+#include <sstream>
 #include <stdexcept>
 #include <cassert>
+#include <algorithm>
 
 using namespace Brainfreeze::ArgParsing;
 
@@ -41,6 +43,9 @@ std::unique_ptr<ArgParserResults> ArgParser::parse(
 
     results_.reset(new ArgParserResults(options_));
     nextArgIndex_ = 0;
+    nextPositionalOptionIndex_ = 0;
+
+    positionalLUT_ = buildPositionalParameterLUT();
 
     // The first argument is always the name of the program that is running. Extract and save this value if it was
     // provided.
@@ -62,7 +67,8 @@ std::unique_ptr<ArgParserResults> ArgParser::parse(
         auto argument = argsToParse_[argIndex];
 
         // Is this the start of a short or long argument name?
-        // TODO: Handle "--", "-", "---" cases
+        // TODO: Handle "--", "-", "---" cases.
+        // TODO: See if " in argument is possible and handle if it is.
         if (argument.length() >= 2 && argument[0] == '-' && argument[1] == '-')
         {
             // Remove the two front dashes before parsing it as a long option name.
@@ -77,8 +83,7 @@ std::unique_ptr<ArgParserResults> ArgParser::parse(
         }
         else
         {
-            // TODO: Handle loose arguments.
-            assert(false && "TODO: handle loose arguments");
+            parseUnboundOption(argument);
         }
     }
 
@@ -90,11 +95,9 @@ void ArgParser::parseLongName(const std::string& longName)
 {
     auto& option = findOptionByLongName(longName);
 
+    // Mark the option set (for flags) and invoke any callbacks associated with parsing this option.
     // TODO: Handle if this option was specified multiple times.
-    // Mark the parameter as being present.
     option.markSet(true);
-
-    // Invoke any callbacks associated with parsing this option.
     option.invokeOnParsed();
 
     // TODO: Make sure this is a valid option argument (no short/long names).
@@ -143,6 +146,23 @@ void ArgParser::parseShortNameGroup(const std::string& argument)
         // TODO: Handle options with parameters.
         // TODO: Only allow one option with a paremeter and it has to be the last option in the group.
     }
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+void ArgParser::parseUnboundOption(const std::string& argument)
+{
+    // Find the first unused positional argument and fill it.
+    // TODO: Throw an exception.
+    assert(nextPositionalOptionIndex_ < positionalLUT_.size());
+    auto positionalOptionIndex = nextPositionalOptionIndex_++;
+    
+    auto& option = findOptionByLongName(positionalLUT_[positionalOptionIndex]);
+    assert(option.desc().isPositional() && option.desc().positionalIndex() == positionalOptionIndex);
+
+    // Set the positional option to have this argument as its parameter.
+    option.addArgument(argument);
+
+    // TODO: Handle positional options that accept more than one parameter.
 }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -320,4 +340,68 @@ OptionState& ArgParser::findOptionByShortName(char shortName)
 
     assert(optionState != nullptr);
     return *optionState;
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+std::string ArgParser::helpText() const
+{
+    std::stringstream ss;
+    return "";
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+size_t ArgParser::generateNextUnusedPositionalIndex()
+{
+    return nextUnusedPositionalIndex_++;
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+std::vector<std::string> ArgParser::buildPositionalParameterLUT() const
+{
+    std::vector<std::string> positionals;
+
+    // Go through all the registered options and collect all positional options into an unsorted array.
+    // TODO: Verify only one positional option that accepts unlimited.
+    for (const auto& kvp : options_)
+    {
+        const auto& option = kvp.second;
+
+        if (option.isPositional())
+        {
+            positionals.push_back(option.name());
+        }
+    }
+
+    // Sort positionals by their index making it so the returned array is keyed to the position index.
+    std::sort(
+        positionals.begin(),
+        positionals.end(),
+        [this](const std::string& oName1, const std::string & oName2) {
+            const auto& o1 = findOptionByLongName(oName1);
+            const auto& o2 = findOptionByLongName(oName2);
+
+            return o1.desc().positionalIndex() < o2.desc().positionalIndex();
+        });
+
+    // Enforce there are no duplicate or missing indices before returning.
+    for (size_t i = 0; i < positionals.size(); ++i)
+    {
+        const auto& option = findOptionByLongName(positionals[i]);
+
+        // TODO: Throw exception.
+        assert(option.desc().expectedArgumentCount() > 0 && "Positional optional expects at least one parameter");
+
+        // TODO: Throw exception if failed.
+        if (i == 0)
+        {
+            assert(option.desc().positionalIndex() == 0);
+        }
+        else
+        {
+            const auto& prevOption = findOptionByLongName(positionals[i - 1]);
+            assert(option.desc().positionalIndex() == prevOption.desc().positionalIndex() + 1);
+        }
+    }
+
+    return positionals;
 }

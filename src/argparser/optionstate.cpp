@@ -54,6 +54,8 @@ void OptionState::addArgument(const std::string& argument)
     assert(arguments_.size() + 1 <= desc_.expectedArgumentCount());
     
     arguments_.push_back(argument);
+    markSet(true);
+
     invokeOnArgument(argument);
 }
 

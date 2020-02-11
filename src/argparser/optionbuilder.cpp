@@ -57,6 +57,22 @@ OptionBuilder& OptionBuilder::expectsArguments(size_t count)
 }
 
 //---------------------------------------------------------------------------------------------------------------------
+OptionBuilder& OptionBuilder::positional()
+{
+    positional(parent_.generateNextUnusedPositionalIndex());
+    return *this;
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+OptionBuilder& OptionBuilder::positional(size_t expectedIndex)
+{
+    assert(desc_.expectedArgumentCount() > 0 && "Positional argument must take parameters");
+
+    desc_.setPositionalIndex(expectedIndex);
+    return *this;
+}
+
+//---------------------------------------------------------------------------------------------------------------------
 OptionBuilder& OptionBuilder::onParsed(parsed_callback_t&& callback)
 {
     assert(!desc_.hasOnParsed() && "Multiple onParsed callbacks not supported");

@@ -42,6 +42,12 @@ namespace Brainfreeze::ArgParsing
             const std::string& name,                ///< Name of the option.
             const OptionDesc& desc);                ///< Option configuration.
 
+        /** Get CLI formatted help text for the options added to the argument parser. */
+        std::string helpText() const;
+
+        /** Get the next unused positional index (used when building new options). */
+        size_t generateNextUnusedPositionalIndex(); // TODO: This shouldn't be here, used by option builder.
+
         /** Convert the traditional argc/argv parameters to a list of strings. */
         static std::vector<std::string> ArgcvToVector(
             int argc,                               ///< Number of arguments to parse.
@@ -49,7 +55,8 @@ namespace Brainfreeze::ArgParsing
 
     private:
         void parseLongName(const std::string& argument);       // TODO: Should be string_view.
-        void parseShortNameGroup(const std::string& argument); // TODO: Should be string_view.      
+        void parseShortNameGroup(const std::string& argument); // TODO: Should be string_view.
+        void parseUnboundOption(const std::string& argument); // TODO: Should be a string_view.
 
         /** Try to find option state by long name. */
         bool tryFindOptionByLongName(
@@ -83,14 +90,24 @@ namespace Brainfreeze::ArgParsing
         /** Get option state by short name. */
         OptionState& findOptionByShortName(char shortName);
 
+        /** Get validated list of positional parameter names. */
+        std::vector<std::string> buildPositionalParameterLUT() const;
+
     private:
+        // TODO: Change LUT value from string to pointer to option.
         std::unordered_map<std::string, OptionDesc> options_;
         std::unordered_map<std::string, std::string> longNameToOptionLUT_;
         std::unordered_map<char, std::string> shortNameToOptionLUT_;
+
+        std::vector<std::string> positionalLUT_;
+        std::size_t nextPositionalOptionIndex_ = 0;
+
         std::unique_ptr<ArgParserResults> results_;
 
         std::vector<std::string> argsToParse_;
         size_t nextArgIndex_ = 0;
+
+        size_t nextUnusedPositionalIndex_ = 0;     // TODO: This shouldn't be here, used by option builder.
     };
 
     /** Holds the results of parsing a command line. */
@@ -141,6 +158,7 @@ namespace Brainfreeze::ArgParsing
         {
         }
 
+        /** Get the name of the option. */
         const std::string& name() const { return name_; }
 
         /**
@@ -169,6 +187,15 @@ namespace Brainfreeze::ArgParsing
 
         /** Set the description for this option. */
         void setDescription(const std::string& description) { description_ = description; }
+
+        /** Get if this option accepts an unbound positional parameter. */
+        bool isPositional() const;
+
+        /** Get the position of the unbound positional parameter this option expects. */
+        size_t positionalIndex() const;
+
+        /** Set the position of the unbound positional parameter this option expects. */
+        void setPositionalIndex(size_t positionalIndex);
 
         /** Get the expected argument count for this option. */
         size_t expectedArgumentCount() const;
@@ -206,6 +233,7 @@ namespace Brainfreeze::ArgParsing
         std::string longName_;
         std::string description_;
 
+        std::optional<std::size_t> positionalIndex_;
         std::optional<std::size_t> expectedArgumentCount_;
 
         parsed_callback_t onParsed_;
@@ -252,7 +280,7 @@ namespace Brainfreeze::ArgParsing
         const std::string& argumentValue() const;
 
     private:
-        OptionDesc desc_;
+        const OptionDesc desc_;
         bool wasSet_ = false;
         std::vector<std::string> arguments_;
     };
@@ -267,7 +295,10 @@ namespace Brainfreeze::ArgParsing
         OptionBuilder& shortName(char shortName);
         OptionBuilder& longName(const std::string& longName);
         OptionBuilder& description(const std::string& description);
+        // TODO: expectsArgument(), or expectsArgument(T*)
         OptionBuilder& expectsArguments(size_t count);
+        OptionBuilder& positional();
+        OptionBuilder& positional(size_t expectedIndex);
         OptionBuilder& onParsed(parsed_callback_t&& callback);
         OptionBuilder& onArgument(argument_callback_t&& callback);
 

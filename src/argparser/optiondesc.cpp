@@ -9,6 +9,26 @@
 using namespace Brainfreeze::ArgParsing;
 
 //---------------------------------------------------------------------------------------------------------------------
+bool OptionDesc::isPositional() const
+{
+    return positionalIndex_.has_value();
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+size_t OptionDesc::positionalIndex() const
+{
+    assert(positionalIndex_.has_value());
+    return positionalIndex_.value();
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+void OptionDesc::setPositionalIndex(size_t positionalIndex)
+{
+    assert(expectedArgumentCount_ > 0 && "Positional options must take at least one parameter");
+    positionalIndex_ = positionalIndex;
+}
+
+//---------------------------------------------------------------------------------------------------------------------
 size_t OptionDesc::expectedArgumentCount() const
 {
     if (expectedArgumentCount_.has_value())

@@ -192,6 +192,7 @@ TEST_CASE("test if a flag was set with short names", "[argparser]")
 // TODO: -vfx [argument]
 // TODO: -vxy [argument] where x and y except argument => EXCEPTION
 // TODO: -vxf [argument] where x expect argument => EXCEPTION
+
 TEST_CASE("an exception is thrown if a short name is not registered", "[argparser]")
 {
     ArgParser ap;
@@ -405,6 +406,74 @@ TEST_CASE("parameter argument invoked each time argument seen for parmeter", "[a
     }
 
     // TODO: Multiple callbacks for multipel arguments
+}
+
+TEST_CASE("Specify positional parameters without option names", "[argparser]")
+{
+    ArgParser ap;
+
+    SECTION("one positional parameter to bind", "[argparser]")
+    {
+        const int ParamCount = 2;
+        const char* Params[ParamCount] = { "myapp", "foobar.txt" };
+
+        std::string filename;
+        ap.addOption("filename").expectsArguments(1).positional().bindString(&filename); // TODO: Rewrite with expectArgument(T).
+
+        auto r = ap.parse(ParamCount, Params);
+
+        REQUIRE("foobar.txt" == filename);
+        REQUIRE(r->option("filename").arguments()[0] == "foobar.txt");
+        REQUIRE(r->option("filename").wasSet());
+    }
+
+    SECTION("two positional parameters to bind", "[argparser]")
+    {
+        const int ParamCount = 3;
+        const char* Params[ParamCount] = { "myapp", "readthis.txt", "wrotethat.txt" };
+
+        std::string inputFileName;
+        std::string outputFileName;
+
+        ap.addOption("input").expectsArguments(1).positional().bindString(&inputFileName); // TODO: Rewrite with expectArgument(T).
+        ap.addOption("output").expectsArguments(1).positional().bindString(&outputFileName);
+
+        auto r = ap.parse(ParamCount, Params);
+
+        REQUIRE("readthis.txt" == inputFileName);
+        REQUIRE(r->option("input").arguments()[0] == "readthis.txt");
+        REQUIRE(r->option("input").wasSet());
+
+        REQUIRE("wrotethat.txt" == outputFileName);
+        REQUIRE(r->option("output").arguments()[0] == "wrotethat.txt");
+        REQUIRE(r->option("output").wasSet());
+    }
+
+    SECTION("two positional parameters out of order", "[argparser]")
+    {
+        const int ParamCount = 3;
+        const char* Params[ParamCount] = { "myapp", "abcdefg", "123456" };
+
+        std::string first;
+        std::string second;
+
+        ap.addOption("second").expectsArguments(1).positional(1).bindString(&second);
+        ap.addOption("first").expectsArguments(1).positional(0).bindString(&first);
+
+        auto r = ap.parse(ParamCount, Params);
+
+        REQUIRE("abcdefg" == first);
+        REQUIRE(r->option("first").arguments()[0] == "abcdefg");
+        REQUIRE(r->option("first").wasSet());
+
+        REQUIRE("123456" == second);
+        REQUIRE(r->option("second").arguments()[0] == "123456");
+        REQUIRE(r->option("second").wasSet());
+    }
+
+    // TODO: Intersperse short and long name parameters with an without options to test.
+    // TODO: Test absence of optional positional => NOT SET.
+    // TODO: Test create two positionals out of order (first #1, then #0).
 }
 
 TEST_CASE("string parameter binding", "[argparser]")
