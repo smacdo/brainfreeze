@@ -28,7 +28,7 @@ TEST_CASE("extract program name from first argument on command line", "[argparse
         const char* Params[ParamCount] = { "foobar", "--filename", "test.txt", "--help" };
 
         ap.addOption("help");
-        ap.addOption("filename").expectsArguments(1);
+        ap.addOption("filename").expectsArgument();
 
         auto r = ap.parse(ParamCount, Params);
 
@@ -41,7 +41,7 @@ TEST_CASE("extract program name from first argument on command line", "[argparse
         const char* Params[ParamCount] = { "--not-an-option", "--filename", "test.txt", "--help" };
 
         ap.addOption("help");
-        ap.addOption("filename").expectsArguments(1);
+        ap.addOption("filename").expectsArgument();
         ap.addOption("not-an-option");
 
         auto r = ap.parse(ParamCount, Params);
@@ -55,7 +55,7 @@ TEST_CASE("extract program name from first argument on command line", "[argparse
         const char* Params[ParamCount] = { "--not-an-option", "--filename", "test.txt", "--help" };
 
         ap.addOption("help");
-        ap.addOption("filename").expectsArguments(1);
+        ap.addOption("filename").expectsArgument();
         ap.addOption("not-an-option");
 
         auto r = ap.parse(ParamCount, Params, false);
@@ -224,7 +224,7 @@ TEST_CASE("can specify a parameter that takes one string argument", "[argparser]
     const int ParamCount = 3;
     const char* Params[ParamCount] = { "myapp", "--filename", "test1.txt" };
 
-    ap.addOption("filename").expectsArguments(1);
+    ap.addOption("filename").expectsArgument();
     auto r = ap.parse(ParamCount, Params);
 
     SECTION("get options via arguments method")
@@ -269,7 +269,7 @@ TEST_CASE("throws an exception if parameter expected arguments ar emissing", "[a
         const int ParamCount = 3;
         const char* Params[ParamCount] = { "myapp", "--filename", "test.png" };
 
-        ap.addOption("filename").expectsArguments(1);
+        ap.addOption("filename").expectsArgument();
 
         REQUIRE_THROWS_AS([&]() { ap.parse(ParamCount - 1, Params); }(), ExpectedArgumentMissingException);
         REQUIRE_NOTHROW([&]() { ap.parse(ParamCount, Params); }());
@@ -294,8 +294,8 @@ TEST_CASE("can specify multiple parameters that take arguments", "[argparser]")
     // TODO: More test cases in here with different set ups to make sure it works
     ArgParser ap;
 
-    ap.addOption("filename").expectsArguments(1);
-    ap.addOption("something").expectsArguments(1);
+    ap.addOption("filename").expectsArgument();
+    ap.addOption("something").expectsArgument();
     ap.addOption("names");
     ap.addOption("verbose");
 
@@ -381,7 +381,7 @@ TEST_CASE("parameter argument invoked each time argument seen for parmeter", "[a
 
         std::string valueSeen;
         ap.addOption("test")
-            .expectsArguments(1)
+            .expectsArgument()
             .onArgument([&valueSeen](std::string_view argument) { valueSeen = argument; });
 
         ap.parse(ParamCount, Params);
@@ -418,7 +418,7 @@ TEST_CASE("Specify positional parameters without option names", "[argparser]")
         const char* Params[ParamCount] = { "myapp", "foobar.txt" };
 
         std::string filename;
-        ap.addOption("filename").expectsArguments(1).positional().bindString(&filename); // TODO: Rewrite with expectArgument(T).
+        ap.addOption("filename").expectsString(&filename).positional();
 
         auto r = ap.parse(ParamCount, Params);
 
@@ -435,8 +435,8 @@ TEST_CASE("Specify positional parameters without option names", "[argparser]")
         std::string inputFileName;
         std::string outputFileName;
 
-        ap.addOption("input").expectsArguments(1).positional().bindString(&inputFileName); // TODO: Rewrite with expectArgument(T).
-        ap.addOption("output").expectsArguments(1).positional().bindString(&outputFileName);
+        ap.addOption("input").expectsString(&inputFileName).positional();
+        ap.addOption("output").expectsString(&outputFileName).positional();
 
         auto r = ap.parse(ParamCount, Params);
 
@@ -457,8 +457,8 @@ TEST_CASE("Specify positional parameters without option names", "[argparser]")
         std::string first;
         std::string second;
 
-        ap.addOption("second").expectsArguments(1).positional(1).bindString(&second);
-        ap.addOption("first").expectsArguments(1).positional(0).bindString(&first);
+        ap.addOption("second").expectsString(&second).positional(1);
+        ap.addOption("first").expectsString(&first).positional(0);
 
         auto r = ap.parse(ParamCount, Params);
 
@@ -486,7 +486,7 @@ TEST_CASE("string parameter binding", "[argparser]")
         const char* Params[ParamCount] = { "myapp", "--name", "christine" };
 
         std::string person;
-        ap.addOption("name").bindString(&person);
+        ap.addOption("name").expectsString(&person);
 
         ap.parse(ParamCount, Params);
 
@@ -506,7 +506,7 @@ TEST_CASE("int parameter binding", "[argparser]")
         const char* Params[ParamCount] = { "myapp", "--favorite-number", "42" };
 
         int favoriteNumber = 0;
-        ap.addOption("favorite-number").bindInt(&favoriteNumber);
+        ap.addOption("favorite-number").expectsInt(&favoriteNumber);
 
         ap.parse(ParamCount, Params);
 

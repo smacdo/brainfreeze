@@ -49,9 +49,14 @@ OptionBuilder& OptionBuilder::description(const std::string& description)
 }
 
 //---------------------------------------------------------------------------------------------------------------------
+OptionBuilder& OptionBuilder::expectsArgument()
+{
+    return expectsArguments(1);
+}
+
+//---------------------------------------------------------------------------------------------------------------------
 OptionBuilder& OptionBuilder::expectsArguments(size_t count)
 {
-    assert(!desc_.didSetExpectedArgumentCount() && "Do not set argument count more than once");
     desc_.setExpectedArgumentCount(count);
     return *this;
 }
@@ -89,7 +94,7 @@ OptionBuilder& OptionBuilder::onArgument(argument_callback_t&& callback)
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-OptionBuilder& OptionBuilder::bindString(std::string* binding)
+OptionBuilder& OptionBuilder::expectsString(std::string* binding)
 {
     // Debug checks to ensure the option is being built in a sane fashion.
     //  (Don't throw in runtime because these errors are build time problems and not user input errors).
@@ -107,7 +112,7 @@ OptionBuilder& OptionBuilder::bindString(std::string* binding)
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-OptionBuilder& OptionBuilder::bindInt(int* binding)
+OptionBuilder& OptionBuilder::expectsInt(int* binding)
 {
     // Debug checks to ensure the option is being built in a sane fashion.
     //  (Don't throw in runtime because these errors are build time problems and not user input errors).
@@ -129,7 +134,7 @@ OptionBuilder& OptionBuilder::bindInt(int* binding)
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-OptionBuilder& OptionBuilder::bindSize(size_t* binding)
+OptionBuilder& OptionBuilder::expectsSize(size_t* binding)
 {
     // Debug checks to ensure the option is being built in a sane fashion.
     //  (Don't throw in runtime because these errors are build time problems and not user input errors).

@@ -295,16 +295,18 @@ namespace Brainfreeze::ArgParsing
         OptionBuilder& shortName(char shortName);
         OptionBuilder& longName(const std::string& longName);
         OptionBuilder& description(const std::string& description);
-        // TODO: expectsArgument(), or expectsArgument(T*)
-        OptionBuilder& expectsArguments(size_t count);
         OptionBuilder& positional();
         OptionBuilder& positional(size_t expectedIndex);
         OptionBuilder& onParsed(parsed_callback_t&& callback);
         OptionBuilder& onArgument(argument_callback_t&& callback);
 
-        OptionBuilder& bindString(std::string* binding);
-        OptionBuilder& bindInt(int* binding);
-        OptionBuilder& bindSize(size_t* binding);
+        OptionBuilder& expectsArgument();
+        OptionBuilder& expectsArguments(size_t count);
+        OptionBuilder& expectsString(std::string* binding);
+        OptionBuilder& expectsInt(int* binding);
+        OptionBuilder& expectsSize(size_t* binding);
+
+        // TODO: template<typename T> expects(T* binding);
 
     private:
         ArgParser& parent_;

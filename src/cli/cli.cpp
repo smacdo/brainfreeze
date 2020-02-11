@@ -61,14 +61,20 @@ int unguardedMain(int argc, const char** argv)
     try
     {
         // Parse command line options.
-        argparser.addOption("help").shortName('h').description("Show this help message and exit");
-        argparser.addOption("version").shortName('v').description("Show version information and exit");
-        argparser.addOption("file").shortName('f').description("Path to Brainfreeze program")
-            .bindString(&inputFilePath);
-        argparser.addOption("cells").description("Number of memory cells to allocate")
-            .bindSize(&cellCount);
-        argparser.addOption("blocksize").description("Size of each memory cell in bytes (1, 2 or 4)")
-            .bindSize(&blockSize);
+        argparser.addOption("help").shortName('h')
+            .description("Show this help message and exit");
+        argparser.addOption("version").shortName('v')
+            .description("Show version information and exit");
+        argparser.addOption("file").shortName('f')
+            .expectsString(&inputFilePath)
+            .positional()
+            .description("Path to Brainfreeze program");
+        argparser.addOption("cells")
+            .expectsSize(&cellCount)
+            .description("Number of memory cells to allocate");
+        argparser.addOption("blocksize")
+            .expectsSize(&blockSize)
+            .description("Size of each memory cell in bytes (1, 2 or 4)");
 
         auto args = argparser.parse(argc, argv);
 
