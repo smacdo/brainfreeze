@@ -85,17 +85,15 @@ OptionBuilder& OptionBuilder::positional(size_t expectedIndex)
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-OptionBuilder& OptionBuilder::onParsed(parsed_callback_t&& callback)
+OptionBuilder& OptionBuilder::onFlag(flag_callback_t&& callback)
 {
-    assert(!desc_.hasOnParsed() && "Multiple onParsed callbacks not supported");
-    desc_.setOnParsed(std::move(callback));
+    desc_.setFlagCallback(std::move(callback));
     return *this;
 }
 
 //---------------------------------------------------------------------------------------------------------------------
 OptionBuilder& OptionBuilder::onArgument(argument_callback_t&& callback)
 {
-    assert(!desc_.hasOnArgument() && "Multiple onArgument callbacks not supported");
     desc_.setOnArgument(std::move(callback));
     return *this;
 }
@@ -167,6 +165,17 @@ OptionBuilder& OptionBuilder::expectsSize(size_t* binding)
                 throw std::runtime_error("size out of range, put a better exception in here");
             }});
     }
+
+    return *this;
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+OptionBuilder& OptionBuilder::showsHelp()
+{
+    assert(desc_.onArgument() == nullptr && "Multiple argument callbacks not supported");
+    assert(!desc_.didSetExpectedArgumentCount() || desc_.expectedArgumentCount() == 1);
+
+
 
     return *this;
 }

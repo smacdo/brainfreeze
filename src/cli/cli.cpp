@@ -80,15 +80,15 @@ int unguardedMain(int argc, const char** argv)
         auto args = argparser.parse(argc, argv);
 
         // Execute depending on command line options.
-        if (args->option("help").wasSet())
+        if (args->option("help").flagValue())
         {
             printHelp();
         }
-        else if (args->option("version").wasSet())
+        else if (args->option("version").flagValue())
         {
             printVersionInfo();
         }
-        else if (args->option("file").wasSet())
+        else if (args->option("file").flagValue())
         {
             auto scriptFilePath = args->option("file").argumentValue();
 

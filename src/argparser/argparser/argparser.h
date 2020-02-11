@@ -10,7 +10,7 @@
 
 namespace Brainfreeze::ArgParsing
 {
-    using parsed_callback_t = std::function<void(void)>;
+    using flag_callback_t = std::function<void(std::optional<bool>)>;
     using argument_callback_t = std::function<void(const std::string&)>;
 
     class ArgParserResults;
@@ -218,14 +218,14 @@ namespace Brainfreeze::ArgParsing
         /** Get if the number of expected arguments has been set. */
         bool didSetExpectedArgumentCount() const;
 
-        /** Get the parsed callback for this option. */
-        const parsed_callback_t& onParsed() const { return onParsed_; }
+        /** Test if option is considered as a flag (no parameters). */
+        bool isFlag() const;
 
-        /** Set the parsed callback for this option. */
-        void setOnParsed(parsed_callback_t&& callback) { onParsed_ = std::move(callback); }
+        /** Invoke the flag callback set on this option. */
+        void invokeFlagCallback(std::optional<bool> flagValue) const;
 
-        /** Get if the parsed callback for this option is set. */
-        bool hasOnParsed() const { return onParsed_ != nullptr; }
+        /** Set callback to be invoked when option is encountered as a flag. */
+        void setFlagCallback(flag_callback_t&& callback) { flagCallback_ = std::move(callback); }
 
         /** Get the argument callback for this option. */
         const argument_callback_t& onArgument() const { return onArgument_; }
@@ -246,7 +246,7 @@ namespace Brainfreeze::ArgParsing
         std::optional<std::size_t> positionalIndex_;
         std::optional<std::size_t> expectedArgumentCount_;
 
-        parsed_callback_t onParsed_;
+        flag_callback_t flagCallback_;
         argument_callback_t onArgument_;
     };
 
@@ -259,14 +259,11 @@ namespace Brainfreeze::ArgParsing
         /** Get option description. */
         const OptionDesc& desc() const { return desc_; }
 
-        /** Get if the option was marked as set. */
-        bool wasSet() const { return wasSet_; }
+        /** Get the option as a flag value. */
+        bool flagValue() const;
 
-        /** Mark that the option was set. */
-        void markSet(bool isSet) { wasSet_ = isSet; }
-
-        /** Invokes the onParsed callback (if set). */
-        void invokeOnParsed();
+        /** Set the option as a flag value. */
+        void setAsFlag(std::optional<bool> flagValue = std::nullopt);
 
         /** Invokes the onArgument callback (if set). */
         void invokeOnArgument(const std::string& value);
@@ -291,7 +288,7 @@ namespace Brainfreeze::ArgParsing
 
     private:
         const OptionDesc desc_;
-        bool wasSet_ = false;
+        std::optional<bool> flagValue_;
         std::vector<std::string> arguments_;
     };
 
@@ -308,7 +305,7 @@ namespace Brainfreeze::ArgParsing
         OptionBuilder& required(bool isRequired = true);
         OptionBuilder& positional();
         OptionBuilder& positional(size_t expectedIndex);
-        OptionBuilder& onParsed(parsed_callback_t&& callback);
+        OptionBuilder& onFlag(flag_callback_t&& callback);
         OptionBuilder& onArgument(argument_callback_t&& callback);
 
         OptionBuilder& expectsArgument();
@@ -316,6 +313,8 @@ namespace Brainfreeze::ArgParsing
         OptionBuilder& expectsString(std::string* binding);
         OptionBuilder& expectsInt(int* binding);
         OptionBuilder& expectsSize(size_t* binding);
+
+        OptionBuilder& showsHelp();
 
         // TODO: template<typename T> expects(T* binding);
 

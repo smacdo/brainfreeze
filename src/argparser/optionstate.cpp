@@ -11,17 +11,26 @@ OptionState::OptionState(OptionDesc desc)
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-void OptionState::invokeOnParsed()
+bool OptionState::flagValue() const
 {
-    if (desc_.hasOnParsed())
-    {
-        desc_.onParsed()();
-    }
+    assert(desc_.isFlag());
+    return flagValue_.value_or(false);
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+void OptionState::setAsFlag(std::optional<bool> flagValue)
+{
+    assert(desc_.isFlag());
+    // TODO: Support custom default value.
+    flagValue_ = flagValue.value_or(true);
+    desc_.invokeFlagCallback(flagValue);
 }
 
 //---------------------------------------------------------------------------------------------------------------------
 void OptionState::invokeOnArgument(const std::string& value)
 {
+    assert(!desc_.isFlag());
+
     if (desc_.hasOnArgument())
     {
         desc_.onArgument()(value);
@@ -51,11 +60,10 @@ size_t OptionState::expectedArgumentsRemaining() const
 void OptionState::addArgument(const std::string& argument)
 {
     // TODO: Validate that arguments expected and this would not add too many arguments.
+    assert(!desc_.isFlag());
     assert(arguments_.size() + 1 <= desc_.expectedArgumentCount());
     
     arguments_.push_back(argument);
-    markSet(true);
-
     invokeOnArgument(argument);
 }
 

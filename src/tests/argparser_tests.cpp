@@ -77,7 +77,7 @@ TEST_CASE("test if a simple flag was set with long names", "[argparser]")
 
         auto r = ap.parse(ParamCount, Params);
 
-        REQUIRE(r->option("foobar").wasSet());
+        REQUIRE(r->option("foobar").flagValue());
     }
 
     SECTION("is set if it is in the list of arguments given")
@@ -88,7 +88,7 @@ TEST_CASE("test if a simple flag was set with long names", "[argparser]")
         ap.addOption("ohnoes");
         auto r = ap.parse(ParamCount, Params);
 
-        REQUIRE(r->option("help").wasSet());
+        REQUIRE(r->option("help").flagValue());
     }
 
     SECTION("can test if multiple flags are set")
@@ -101,11 +101,11 @@ TEST_CASE("test if a simple flag was set with long names", "[argparser]")
         ap.addOption("fooba");
         auto r = ap.parse(ParamCount, Params);
 
-        REQUIRE(r->option("foobar").wasSet());
-        REQUIRE(r->option("bar").wasSet());
-        REQUIRE(r->option("foo").wasSet());
+        REQUIRE(r->option("foobar").flagValue());
+        REQUIRE(r->option("bar").flagValue());
+        REQUIRE(r->option("foo").flagValue());
 
-        REQUIRE_FALSE(r->option("fooba").wasSet());
+        REQUIRE_FALSE(r->option("fooba").flagValue());
     }
 
     SECTION("is not set if it is not in the list of arguments given")
@@ -117,7 +117,7 @@ TEST_CASE("test if a simple flag was set with long names", "[argparser]")
         ap.addOption("ohnoes");
         auto r = ap.parse(ParamCount, Params);
 
-        REQUIRE_FALSE(r->option("help").wasSet());
+        REQUIRE_FALSE(r->option("help").flagValue());
     }
 }
 
@@ -146,9 +146,9 @@ TEST_CASE("test if a flag was set with short names", "[argparser]")
 
         auto r = ap.parse(ParamCount, Params);
 
-        REQUIRE_FALSE(r->option("help").wasSet());
-        REQUIRE(r->option("version").wasSet());
-        REQUIRE_FALSE(r->option("force").wasSet());
+        REQUIRE_FALSE(r->option("help").flagValue());
+        REQUIRE(r->option("version").flagValue());
+        REQUIRE_FALSE(r->option("force").flagValue());
     }
 
     SECTION("can test if single option (force) is set")
@@ -158,9 +158,9 @@ TEST_CASE("test if a flag was set with short names", "[argparser]")
 
         auto r = ap.parse(ParamCount, Params);
 
-        REQUIRE_FALSE(r->option("help").wasSet());
-        REQUIRE_FALSE(r->option("version").wasSet());
-        REQUIRE(r->option("force").wasSet());
+        REQUIRE_FALSE(r->option("help").flagValue());
+        REQUIRE_FALSE(r->option("version").flagValue());
+        REQUIRE(r->option("force").flagValue());
     }
 
     SECTION("can test if multiple options are set (one per argument)")
@@ -170,21 +170,21 @@ TEST_CASE("test if a flag was set with short names", "[argparser]")
 
         auto a = ap.parse(2, Params);
 
-        REQUIRE_FALSE(a->option("help").wasSet());
-        REQUIRE(a->option("version").wasSet());
-        REQUIRE_FALSE(a->option("force").wasSet());
+        REQUIRE_FALSE(a->option("help").flagValue());
+        REQUIRE(a->option("version").flagValue());
+        REQUIRE_FALSE(a->option("force").flagValue());
 
         auto b = ap.parse(3, Params);
 
-        REQUIRE_FALSE(b->option("help").wasSet());
-        REQUIRE(b->option("version").wasSet());
-        REQUIRE(b->option("force").wasSet());
+        REQUIRE_FALSE(b->option("help").flagValue());
+        REQUIRE(b->option("version").flagValue());
+        REQUIRE(b->option("force").flagValue());
 
         auto c = ap.parse(4, Params);
 
-        REQUIRE(c->option("help").wasSet());
-        REQUIRE(c->option("version").wasSet());
-        REQUIRE(c->option("force").wasSet());
+        REQUIRE(c->option("help").flagValue());
+        REQUIRE(c->option("version").flagValue());
+        REQUIRE(c->option("force").flagValue());
     }
 }
 
@@ -330,7 +330,7 @@ TEST_CASE("parameter callback each time it is encountered", "[argparser]")
         const char* Params[ParamCount] = { "myapp", "--extra1", "--verbose", "--extra2", "--extra1" };
 
         int verboseCounter = 0;
-        ap.addOption("verbose").onParsed([&verboseCounter]() {verboseCounter++; });
+        ap.addOption("verbose").onFlag([&verboseCounter](std::optional<bool>) {verboseCounter++; });
 
         ap.parse(ParamCount, Params);
 
@@ -343,7 +343,7 @@ TEST_CASE("parameter callback each time it is encountered", "[argparser]")
         const char* Params[ParamCount] = { "myapp", "--extra1", "--verbose", "--extra2", "--verbose" };
 
         int verboseCounter = 0;
-        ap.addOption("verbose").onParsed([&verboseCounter]() {verboseCounter++; });
+        ap.addOption("verbose").onFlag([&verboseCounter](std::optional<bool>) {verboseCounter++; });
 
         ap.parse(ParamCount, Params);
 
@@ -356,10 +356,10 @@ TEST_CASE("parameter callback each time it is encountered", "[argparser]")
         const char* Params[ParamCount] = { "myapp", "--extra1", "--foo", "--bar", "--bar" };
 
         int fooCounter = 0;
-        ap.addOption("foo").onParsed([&fooCounter]() {fooCounter++; });
+        ap.addOption("foo").onFlag([&fooCounter](std::optional<bool>) {fooCounter++; });
 
         int barCounter = 0;
-        ap.addOption("bar").onParsed([&barCounter]() {barCounter++; });
+        ap.addOption("bar").onFlag([&barCounter](std::optional<bool>) {barCounter++; });
 
         ap.parse(ParamCount, Params);
 
@@ -424,7 +424,6 @@ TEST_CASE("Specify positional parameters without option names", "[argparser]")
 
         REQUIRE("foobar.txt" == filename);
         REQUIRE(r->option("filename").arguments()[0] == "foobar.txt");
-        REQUIRE(r->option("filename").wasSet());
     }
 
     SECTION("two positional parameters to bind", "[argparser]")
@@ -442,11 +441,9 @@ TEST_CASE("Specify positional parameters without option names", "[argparser]")
 
         REQUIRE("readthis.txt" == inputFileName);
         REQUIRE(r->option("input").arguments()[0] == "readthis.txt");
-        REQUIRE(r->option("input").wasSet());
 
         REQUIRE("wrotethat.txt" == outputFileName);
         REQUIRE(r->option("output").arguments()[0] == "wrotethat.txt");
-        REQUIRE(r->option("output").wasSet());
     }
 
     SECTION("two positional parameters out of order", "[argparser]")
@@ -464,11 +461,9 @@ TEST_CASE("Specify positional parameters without option names", "[argparser]")
 
         REQUIRE("abcdefg" == first);
         REQUIRE(r->option("first").arguments()[0] == "abcdefg");
-        REQUIRE(r->option("first").wasSet());
 
         REQUIRE("123456" == second);
         REQUIRE(r->option("second").arguments()[0] == "123456");
-        REQUIRE(r->option("second").wasSet());
     }
 
     // TODO: Intersperse short and long name parameters with an without options to test.
@@ -528,7 +523,7 @@ TEST_CASE("required options", "[argparser]")
 
         ap.addOption("hello").required();
 
-        REQUIRE_NOTHROW([&]() { ap.parse(ParamCount, Params - 1); }());
+        REQUIRE_NOTHROW([&]() { ap.parse(ParamCount, Params); }());
         REQUIRE_THROWS_AS([&]() { ap.parse(ParamCount - 1, Params); }(), RequiredOptionMissingException);
     }
 

@@ -96,33 +96,38 @@ std::unique_ptr<ArgParserResults> ArgParser::parse(
 //---------------------------------------------------------------------------------------------------------------------
 void ArgParser::parseLongName(const std::string& longName)
 {
-    auto& option = findOptionByLongName(longName);
-
-    // Mark the option set (for flags) and invoke any callbacks associated with parsing this option.
     // TODO: Handle if this option was specified multiple times.
-    option.markSet(true);
-    option.invokeOnParsed();
-
-    // TODO: Make sure this is a valid option argument (no short/long names).
-
-    // Read expected arguments from the remaining unparsed arguments.
-    // TODO: Handle optional arguments.
-    while (option.expectsMoreArguments())
+    auto& option = findOptionByLongName(longName);
+    const auto& optionDesc = option.desc();
+    
+    // Mark the option set (for flags) and invoke any callbacks associated with parsing this option.
+    if (optionDesc.isFlag())
     {
-        // Make sure there is another argument to read.
-        if (nextArgIndex_ >= argsToParse_.size())
+        // TODO: Handle optional true/false parameter for flags that allow it.
+        //  format: --flag=true|false
+        option.setAsFlag();
+    }
+    else
+    {
+        // Read expected arguments from the remaining unparsed arguments.
+        // TODO: Handle optional arguments.
+        while (option.expectsMoreArguments())
         {
-            throw ExpectedArgumentMissingException(
-                longName,
-                option.argumentCount(),
-                option.desc().expectedArgumentCount(),
-                __FILE__, __LINE__);
-        }
+            // Make sure there is another argument to read.
+            if (nextArgIndex_ >= argsToParse_.size())
+            {
+                throw ExpectedArgumentMissingException(
+                    longName,
+                    option.argumentCount(),
+                    option.desc().expectedArgumentCount(),
+                    __FILE__, __LINE__);
+            }
 
-        // Add the next argument to the current option.
-        // TODO: Check the next argument is "valid" (eg doesn't have - or --, etc)
-        // TODO: Handle strings (is that here or somewhere else?)
-        option.addArgument(argsToParse_[nextArgIndex_++]);
+            // Add the next argument to the current option.
+            // TODO: Check the next argument is "valid" (eg doesn't have - or --, etc)
+            // TODO: Handle strings (is that here or somewhere else?)
+            option.addArgument(argsToParse_[nextArgIndex_++]);
+        }
     }
 
     // TODO: Handle action associated with argument.
@@ -139,15 +144,21 @@ void ArgParser::parseShortNameGroup(const std::string& argument)
     {
         auto c = argument[i];
 
-        // Look up the option named by the shortname, mark it as set and invoke any callback associated with the
-        // option.
+        // Look up the option named by the shortname and handle it differently if it is a flag or an option expecting a
+        // value.
         auto& option = findOptionByShortName(c);
+        const auto& optionDesc = option.desc();
 
-        option.markSet(true);
-        option.invokeOnParsed();
-
-        // TODO: Handle options with parameters.
-        // TODO: Only allow one option with a paremeter and it has to be the last option in the group.
+        if (optionDesc.isFlag())
+        {
+            option.setAsFlag();
+        }
+        else
+        {
+            // TODO: Handle options with parameters.
+            // TODO: Only allow one option with a paremeter and it has to be the last option in the group.
+            assert(false && "Implement support for short name options expecting arguments");
+        }
     }
 }
 

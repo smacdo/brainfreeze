@@ -99,7 +99,7 @@ void ArgParserResults::validate() const
         const auto& option = kvp.second;
 
         // Check that required options were parsed.
-        if (option->desc().isRequired() && !option->wasSet())
+        if (option->desc().isRequired() && !option->flagValue())
         {
             throw RequiredOptionMissingException(option->desc().name(), __FILE__, __LINE__);
         }

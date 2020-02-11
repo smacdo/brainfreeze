@@ -61,3 +61,20 @@ bool OptionDesc::didSetExpectedArgumentCount() const
 {
     return expectedArgumentCount_.has_value();
 }
+
+//---------------------------------------------------------------------------------------------------------------------
+bool OptionDesc::isFlag() const
+{
+    return expectedArgumentCount() == 0;
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+void OptionDesc::invokeFlagCallback(std::optional<bool> flagValue) const
+{
+    assert(isFlag());
+
+    if (flagCallback_)
+    {
+        flagCallback_(flagValue);
+    }
+}
