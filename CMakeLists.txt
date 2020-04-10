@@ -11,6 +11,7 @@ else()
 endif()
 
 add_subdirectory(thirdparty/catch2)
+add_subdirectory(thirdparty/cli11)
 add_subdirectory(src/argparser)
 add_subdirectory(src/bf)
 add_subdirectory(src/cli)

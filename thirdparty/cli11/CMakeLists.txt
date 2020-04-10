@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 3.15)
+project(CLI11 VERSION 1.9 LANGUAGES CXX)
+add_library(CLI11 INTERFACE)
+target_include_directories(CLI11 INTERFACE include/)
+target_compile_features(CLI11 INTERFACE cxx_std_17)
