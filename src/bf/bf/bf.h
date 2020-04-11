@@ -29,6 +29,8 @@ namespace Brainfreeze
         FastJumpBack = 12
     };
 
+    class IConsole;
+
     /** The brainfreeze interpreter. */
     class Interpreter
     {
@@ -101,6 +103,11 @@ namespace Brainfreeze
         /** Construct interpreter with code to be run. */
         Interpreter(std::vector<instruction_t> instructions);
 
+        /** Construct interpreter with code to be run. */
+        Interpreter(
+            std::vector<instruction_t> instructions,
+            std::unique_ptr<IConsole> console);
+
     public:
         /** Get the number of memory cells to allocate for execution. */
         std::size_t cellCount() const noexcept { return cellCount_; }
@@ -114,17 +121,11 @@ namespace Brainfreeze
         /** Set the size in bytes for a memory cell. */
         void setCellSize(size_t bytes);
 
-        /** Get the read function used by the interpreter. */
-        std::function<byte_t(void)> readFunction() const { return readFunction_; }
+        /** Get the console used by the interpreter. */
+        IConsole* console() const { return console_.get(); }
 
-        /** Set the read function used by the interpreter. */
-        void setReadFunction(std::function<byte_t(void)> func) { readFunction_ = std::move(func); }
-
-        /** Get the write function used by the interprter. */
-        std::function<void(byte_t)> writeFunction() const { return writeFunction_; }
-
-        /** Set the write function used by the interpreter. */
-        void setWriteFunction(std::function<void(byte_t)> func) { writeFunction_ = std::move(func); }
+        /** Set the console used by the interpreter. */
+        void setConsole(std::unique_ptr<IConsole> console) { console_ = std::move(console); }
 
     public:
         /** Execute the Brainfreeze program and do not return until execution has finished. */
@@ -163,15 +164,14 @@ namespace Brainfreeze
         std::size_t cellCount_ = 30000;
         std::size_t cellSize_ = 1;
 
-        std::function<void(byte_t)> writeFunction_;
-        std::function<byte_t(void)> readFunction_;
+        std::unique_ptr<IConsole> console_;
     };
 
     /** Compiles Brainfreeze code into executable instructions. */
     class Compiler
     {
     public:
-        /** Convert Brainfreeze code into an exeuctable Brainfreeze program. */
+        /** Convert Brainfreeze code into an executable Brainfreeze program. */
         std::vector<instruction_t> compile(std::string_view programtext) const;
 
     public:
@@ -243,6 +243,19 @@ namespace Brainfreeze
         uint32_t data_ = 0;
     };
 
+    /** Abstracts console window handling from the interpreter. */
+    class IConsole
+    {
+    public:
+        virtual ~IConsole();
+
+        /** Default write implementation: writes a byte to standard output. */
+        virtual void Write(Interpreter::byte_t d) = 0;
+
+        /** Default read implementation: reads a byte from standard input. */
+        virtual Interpreter::byte_t Read() = 0;
+    };
+
     namespace Helpers
     {
         /**
@@ -277,14 +290,5 @@ namespace Brainfreeze
 
         /** Get the name of a Brainfreeze instruction. */
         std::string AsName(OpcodeType instruction);
-    }
-
-    namespace Details
-    {
-        /** Default write implementation: writes a byte to standard output. */
-        void Write(Interpreter::byte_t d);
-
-        /** Default read implementation: reads a byte from standard input. */
-        Interpreter::byte_t Read();
     }
 }

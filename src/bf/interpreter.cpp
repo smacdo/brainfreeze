@@ -8,9 +8,16 @@ using namespace Brainfreeze;
 
 //---------------------------------------------------------------------------------------------------------------------
 Interpreter::Interpreter(std::vector<instruction_t> instructions)
+    : Interpreter(std::move(instructions), nullptr)
+{
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+Interpreter::Interpreter(
+        std::vector<instruction_t> instructions,
+        std::unique_ptr<IConsole> console)
     : instructions_(std::move(instructions)),
-      writeFunction_(Brainfreeze::Details::Write),
-      readFunction_(Brainfreeze::Details::Read)
+      console_(std::move(console))
 {
 }
 
@@ -44,6 +51,8 @@ void Interpreter::setCellSize(size_t bytes)
 //---------------------------------------------------------------------------------------------------------------------
 void Interpreter::start()
 {
+    // TODO: If console required check that it is defined.
+    assert(console_ != nullptr);
     memory_.resize(cellCount_ * cellSize_);
     mp_ = memory_.begin();
     ip_ = instructions_.begin();
@@ -94,11 +103,11 @@ Interpreter::RunState Interpreter::runStep()
         break;
 
     case OpcodeType::Write:
-        writeFunction_(*mp_);
+        console_->Write(*mp_);
         break;
 
     case OpcodeType::Read:
-        *mp_ = readFunction_();
+        *mp_ = console_->Read();
         break;
 
     case OpcodeType::JumpForward:

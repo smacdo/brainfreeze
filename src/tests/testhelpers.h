@@ -14,6 +14,10 @@ namespace Brainfreeze
             std::function<void(Compiler&)>&& configureCallback);
         std::vector<instruction_t> Compile(const std::string& code);
         Interpreter CreateInterpreter(const std::string& code);
+        Interpreter CreateInterpreter(
+            const std::string& code,
+            std::function<Interpreter::byte_t(void)>&& readFunc,
+            std::function<void(Interpreter::byte_t)>&& writeFunc);
         
         /** Matches memory values in a brainfreeze proram. */
         // TODO: Take a memory pointer type for better test/matching.
@@ -56,6 +60,27 @@ namespace Brainfreeze
         MemoryMatcher HasMemory(size_t offset, Interpreter::byte_t expected);
         InstructionPointerMatcher InstructionPointerIs(std::size_t expectedAddress);  // TODO: MemoryAdddressIs
         MemoryPointerMatcher MemoryPointerIs(std::size_t expectedAddress);
+
+        class TestableConsole : public IConsole
+        {
+        public:
+            TestableConsole(
+                std::function<Interpreter::byte_t(void)>&& readFunc,
+                std::function<void(Interpreter::byte_t)>&& writeFunc);
+
+            virtual void Write(Interpreter::byte_t d) override;
+            virtual Interpreter::byte_t Read() override;
+
+            std::function<Interpreter::byte_t(void)> readFunction() const;
+            void setReadFunction(std::function<Interpreter::byte_t(void)> func);
+
+            std::function<void(Interpreter::byte_t)> writeFunction() const;
+            void setWriteFunction(std::function<void(Interpreter::byte_t)> func);
+
+        private:
+            std::function<Interpreter::byte_t(void)> readFunction_;
+            std::function<void(Interpreter::byte_t)> writeFunction_;
+        };
     }
 
     std::ostream& operator <<(std::ostream& os, Interpreter::instruction_pointer_t ip);

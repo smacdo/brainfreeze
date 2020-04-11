@@ -8,12 +8,13 @@ set(SOURCES
 	bf.cpp
 	compiler.cpp
 	helpers.cpp
+	iconsole.cpp
 	instruction.cpp
 	interpreter.cpp
-	readwrite.cpp
 	bf/bf.h)
 
 add_library(brainfreeze-interpreter STATIC ${SOURCES})
 target_include_directories(brainfreeze-interpreter PUBLIC bf)
+target_link_libraries(brainfreeze-interpreter loguru)
 target_compile_features(brainfreeze-interpreter PUBLIC cxx_std_17)
 set_target_properties(brainfreeze-interpreter PROPERTIES CXX_EXTENSIONS OFF)

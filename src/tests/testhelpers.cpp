@@ -149,8 +149,22 @@ std::vector<instruction_t> Brainfreeze::TestHelpers::Compile(const std::string& 
 //---------------------------------------------------------------------------------------------------------------------
 Interpreter Brainfreeze::TestHelpers::CreateInterpreter(const std::string& code)
 {
+    return CreateInterpreter(
+        code,
+        []() { return Interpreter::byte_t{}; },
+        [](Interpreter::byte_t) {});
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+Interpreter Brainfreeze::TestHelpers::CreateInterpreter(
+    const std::string& code,
+    std::function<Interpreter::byte_t(void)>&& readFunc,
+    std::function<void(Interpreter::byte_t)>&& writeFunc)
+{
     Compiler compiler;
-    return Interpreter(compiler.compile(code));
+    return Interpreter(
+        compiler.compile(code),
+        std::make_unique<TestableConsole>(std::move(readFunc), std::move(writeFunc)));
 }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -185,4 +199,49 @@ std::ostream& Brainfreeze::operator <<(std::ostream& os, std::vector<instruction
 {
     os << *itr;
     return os;
+}
+
+//=====================================================================================================================
+TestableConsole::TestableConsole(
+        std::function<Interpreter::byte_t(void)>&& readFunc,
+        std::function<void(Interpreter::byte_t)>&& writeFunc)
+    : readFunction_(std::move(readFunc)),
+      writeFunction_(std::move(writeFunc))
+{
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+void TestableConsole::Write(Interpreter::byte_t d)
+{
+    writeFunction_(d);
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+Interpreter::byte_t TestableConsole::Read()
+{
+    return readFunction_();
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+std::function<Interpreter::byte_t(void)> TestableConsole::readFunction() const
+{
+    return readFunction_;
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+void TestableConsole::setReadFunction(std::function<Interpreter::byte_t(void)> func)
+{
+    readFunction_ = std::move(func);
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+std::function<void(Interpreter::byte_t)> TestableConsole::writeFunction() const
+{
+    return writeFunction_;
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+void TestableConsole::setWriteFunction(std::function<void(Interpreter::byte_t)> func)
+{
+    writeFunction_ = std::move(func);
 }

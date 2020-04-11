@@ -9,9 +9,10 @@ TEST_CASE("Hello World", "[smoketests]")
 {
     std::string buffer;
     auto app = CreateInterpreter(
-        "++++++++++[>+++++++>++++++++++>+++>+<<<<-]>++.>+.+++++++..+++.>++.<<+++++++++++++++.>.+++.------.--------.>+.>.");
+        "++++++++++[>+++++++>++++++++++>+++>+<<<<-]>++.>+.+++++++..+++.>++.<<+++++++++++++++.>.+++.------.--------.>+.>.",
+        []() { return Interpreter::byte_t{}; },
+        [&buffer](Interpreter::byte_t b) { buffer.append(1, (char)b); });
 
-    app.setWriteFunction([&buffer](Interpreter::byte_t b) { buffer.append(1, (char)b); });
     app.run();
 
     REQUIRE("Hello World!\n" == buffer);
@@ -22,10 +23,7 @@ TEST_CASE("Echo", "[smoketests]")
     std::string input("testing 123");
     std::string output;
 
-    auto app = CreateInterpreter(",[.,]");
-
-    app.setWriteFunction([&output](Interpreter::byte_t b) { output.append(1, (char)b); });
-    app.setReadFunction([&input]() {
+    auto readFunc = [&input]() {
         if (input.empty())
         {
             return (Interpreter::byte_t)0;
@@ -35,9 +33,10 @@ TEST_CASE("Echo", "[smoketests]")
             auto c = input.front();
             input.erase(input.begin());
             return (Interpreter::byte_t)c;
-        }});
-    
-
+        }};
+    auto writeFunc = [&output](Interpreter::byte_t b) { output.append(1, (char)b); };
+    auto app = CreateInterpreter(",[.,]", readFunc, writeFunc);
+   
     app.run();
 
     REQUIRE("testing 123" == output);

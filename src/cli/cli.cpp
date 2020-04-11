@@ -1,12 +1,15 @@
 // Copyright 2009-2020, Scott MacDonald.
 #include "bf.h"
-#include "argparser.h"
+#include "windows_console.h"        // TODO: Make one for each platform
+
+#include <CLI11/CLI11.hpp>
+#include <loguru/loguru.hpp>
 
 #include <iostream>
 #include <fstream>
 #include <cassert>
 
-using namespace Brainfreeze::ArgParsing;
+using namespace Brainfreeze;
 
 /**
  * Summons forth helpful version information along with licensing and
@@ -42,7 +45,7 @@ void printHelp()
         << std::endl << std::endl;
 }
 
-int unguardedMain(int argc, const char** argv)
+int unguardedMain(int argc, char** argv)
 {
     // Configure command line arguments.
     // TODO: Support specifying input file w/out the -f flag.
@@ -50,74 +53,48 @@ int unguardedMain(int argc, const char** argv)
     // TODO: Support reading from standard in / out.
     // TODO: Support setting input / output as files.
     // TODO: Take unbound input as file input.
-    ArgParser argparser;
+    CLI::App app;
 
-    //argparser.setDescription("Runs Brainfreeze programs");
+    app.description("Executes brainfreeze programs (a nicer brainf*ck) from the command line");
+
+    //argparser.setAppCopyright("Brainfreeze (c) 2020 Scott MacDonald");
+
 
     std::string inputFilePath;
     size_t cellCount = 30000;           // TODO: Use to configure interpreter.
     size_t blockSize = 1;               // TODO: Use to configure interpreter.
 
-    try
-    {
-        // Parse command line options.
-        argparser.addOption("help").shortName('h')
-            .description("Show this help message and exit");
-        argparser.addOption("version").shortName('v')
-            .description("Show version information and exit");
-        argparser.addOption("file").shortName('f')
-            .required()
-            .expectsString(&inputFilePath)
-            .positional()
-            .description("Path to Brainfreeze program");
-        argparser.addOption("cells")
-            .expectsSize(&cellCount)
-            .description("Number of memory cells to allocate");
-        argparser.addOption("blocksize")
-            .expectsSize(&blockSize)
-            .description("Size of each memory cell in bytes (1, 2 or 4)");
+    // Parse command line options.
+    app.add_option("-f,--file,file", inputFilePath, "Path to Brainfreeze program")->required();
+    app.add_option("--cells", cellCount, "Number of memory cells to allocate");     // TODO: Validate.
+    app.add_option("--blockSize", blockSize, "Size of each memory cell in bytes (1, 2, or 4)"); // TODO: Validate.
 
-        auto args = argparser.parse(argc, argv);
+    // TODO: Add ability to set null console or read from file or something.
 
-        // Execute depending on command line options.
-        if (args->option("help").flagValue())
-        {
-            printHelp();
-        }
-        else if (args->option("version").flagValue())
-        {
-            printVersionInfo();
-        }
-        else if (args->option("file").flagValue())
-        {
-            auto scriptFilePath = args->option("file").argumentValue();
+    CLI11_PARSE(app, argc, argv);
 
-            // Load code from disk.
-            // TODO: Manually load the code, and then configure the compiler instead of this oneshot function.
-            // TODO: Configure interpeter with command line options.
-            // TODO: Print an error if code failed to load.
-            // TODO: Print errors from code along with line/column and highlighting.
-            auto interpreter = Brainfreeze::Helpers::LoadFromDisk(scriptFilePath);
-            interpreter->run();
-        }
-        else
-        {
-            std::cerr << "No action or program given" << std::endl;
-            printHelp();
-        }
-    }
-    catch (const ArgParserException & e)
-    {
-        std::cerr << e.message() << std::endl;
-        printHelp();
-        return EXIT_FAILURE;
-    }
+    // Load code from disk.
+    // TODO: Manually load the code, and then configure the compiler instead of this oneshot function.
+    // TODO: Configure interpeter with command line options.
+    // TODO: Print an error if code failed to load.
+    // TODO: Print errors from code along with line/column and highlighting.
+    auto interpreter = Brainfreeze::Helpers::LoadFromDisk(inputFilePath);
 
+    // TODO: Set platform specific console.
+    interpreter->setConsole(std::make_unique<WindowsConsole>());
+
+    interpreter->run();
+    
     return EXIT_SUCCESS;
 }
 
-int main(int argc, const char* argv[])
+int main(int argc, char* argv[])
 {
+    loguru::g_stderr_verbosity = loguru::Verbosity_OFF;     // Disable writing to stderr.
+    loguru::init(argc, argv);
+    loguru::g_stderr_verbosity = loguru::Verbosity_OFF;     // Disable writing to stderr.
+    loguru::add_file("output.log", loguru::Truncate, loguru::Verbosity_MAX);    // TODO: Make this configurable.
+
     try
     {
         return unguardedMain(argc, argv);
