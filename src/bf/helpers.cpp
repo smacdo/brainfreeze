@@ -63,6 +63,9 @@ std::vector<instruction_t>::const_iterator Brainfreeze::Helpers::FindJumpTarget(
     assert(jump < end);
     assert(jump->isA(OpcodeType::JumpForward) || jump->isA(OpcodeType::JumpBack));
 
+    begin = begin;
+    end = end;
+
     if (jump->isA(OpcodeType::JumpForward))
     {
         int depth = 1;
