@@ -29,7 +29,7 @@ namespace Brainfreeze
         FastJumpBack = 12
     };
 
-    class IConsole;
+    class Console;
 
     /** The brainfreeze interpreter. */
     class Interpreter
@@ -99,6 +99,14 @@ namespace Brainfreeze
             Finished
         };
 
+        enum class EndOfStreamBehavior
+        {
+            Zero = 0,
+            NegativeOne = 1,
+            NoChange = 2,
+            Ignore = 3
+        };
+
     public:
         /** Construct interpreter with code to be run. */
         Interpreter(std::vector<instruction_t> instructions);
@@ -106,7 +114,7 @@ namespace Brainfreeze
         /** Construct interpreter with code to be run. */
         Interpreter(
             std::vector<instruction_t> instructions,
-            std::unique_ptr<IConsole> console);
+            std::unique_ptr<Console> console);
 
     public:
         /** Get the number of memory cells to allocate for execution. */
@@ -121,11 +129,17 @@ namespace Brainfreeze
         /** Set the size in bytes for a memory cell. */
         void setCellSize(size_t bytes);
 
+        /** Get the end of stream behavior. */
+        EndOfStreamBehavior endOfStreamBehavior() const noexcept { return endOfStreamBehavior_; }
+
+        /** Set the end of stream behavior. */
+        void setEndOfStreamBehavior(EndOfStreamBehavior behavior) noexcept { endOfStreamBehavior_ = behavior; }
+
         /** Get the console used by the interpreter. */
-        IConsole* console() const { return console_.get(); }
+        Console* console() const { return console_.get(); }
 
         /** Set the console used by the interpreter. */
-        void setConsole(std::unique_ptr<IConsole> console) { console_ = std::move(console); }
+        void setConsole(std::unique_ptr<Console> console) { console_ = std::move(console); }
 
     public:
         /** Execute the Brainfreeze program and do not return until execution has finished. */
@@ -163,8 +177,9 @@ namespace Brainfreeze
 
         std::size_t cellCount_ = 30000;
         std::size_t cellSize_ = 1;
+        EndOfStreamBehavior endOfStreamBehavior_ = EndOfStreamBehavior::NegativeOne;
 
-        std::unique_ptr<IConsole> console_;
+        std::unique_ptr<Console> console_;
     };
 
     /** Compiles Brainfreeze code into executable instructions. */
@@ -244,16 +259,40 @@ namespace Brainfreeze
     };
 
     /** Abstracts console window handling from the interpreter. */
-    class IConsole
+    class Console
     {
     public:
-        virtual ~IConsole();
+        /** Destructor. */
+        virtual ~Console();
+
+        /** Get if characters should be echoed when typed. */
+        bool shouldEchoCharForInput() const noexcept { return bEchoCharWhenReading_; }
+
+        /** Set if characters should be echoed when typed. */
+        void setShouldEchoCharForInput(bool newValue) noexcept { bEchoCharWhenReading_ = newValue; }
+
+        /** Get if CR (\r and \r\n) should be converted to LF (\n) when read from input. */
+        bool shouldConvertInputCRtoLF() const noexcept { return bConvertInputCRtoLF_; }
+
+        /** Set if CR (\r and \r\n) should be converted to LF (\n) when read from input. */
+        void setShouldConvertInputCRtoLF(bool newValue) noexcept { bConvertInputCRtoLF_ = newValue; }
+
+        /** Get if LF (\n) should be converted to CRLF (\r\n) when written to output. */
+        bool shouldConvertOutputLFtoCRLF() const noexcept { return bConvertOutputLFtoCRLF_; }
+
+        /** Set if LF (\n) should be converted to CRLF (\r\n) when written to output. */
+        void setShouldConvertOutputLFtoCRLF(bool newValue) noexcept { bConvertOutputLFtoCRLF_ = newValue; }
 
         /** Default write implementation: writes a byte to standard output. */
-        virtual void Write(Interpreter::byte_t d) = 0;
+        virtual void Write(char d) = 0;
 
         /** Default read implementation: reads a byte from standard input. */
-        virtual Interpreter::byte_t Read() = 0;
+        virtual char Read() = 0;
+
+    private:
+        bool bEchoCharWhenReading_ = true;
+        bool bConvertInputCRtoLF_ = true;
+        bool bConvertOutputLFtoCRLF_ = true;
     };
 
     namespace Helpers

@@ -203,45 +203,45 @@ std::ostream& Brainfreeze::operator <<(std::ostream& os, std::vector<instruction
 
 //=====================================================================================================================
 TestableConsole::TestableConsole(
-        std::function<Interpreter::byte_t(void)>&& readFunc,
-        std::function<void(Interpreter::byte_t)>&& writeFunc)
+        std::function<char(void)>&& readFunc,
+        std::function<void(char)>&& writeFunc)
     : readFunction_(std::move(readFunc)),
       writeFunction_(std::move(writeFunc))
 {
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-void TestableConsole::Write(Interpreter::byte_t d)
+void TestableConsole::Write(char d)
 {
     writeFunction_(d);
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-Interpreter::byte_t TestableConsole::Read()
+char TestableConsole::Read()
 {
     return readFunction_();
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-std::function<Interpreter::byte_t(void)> TestableConsole::readFunction() const
+std::function<char(void)> TestableConsole::readFunction() const
 {
     return readFunction_;
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-void TestableConsole::setReadFunction(std::function<Interpreter::byte_t(void)> func)
+void TestableConsole::setReadFunction(std::function<char(void)> func)
 {
     readFunction_ = std::move(func);
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-std::function<void(Interpreter::byte_t)> TestableConsole::writeFunction() const
+std::function<void(char)> TestableConsole::writeFunction() const
 {
     return writeFunction_;
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-void TestableConsole::setWriteFunction(std::function<void(Interpreter::byte_t)> func)
+void TestableConsole::setWriteFunction(std::function<void(char)> func)
 {
     writeFunction_ = std::move(func);
 }

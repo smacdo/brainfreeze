@@ -4,4 +4,4 @@
 using namespace Brainfreeze;
 
 //---------------------------------------------------------------------------------------------------------------------
-IConsole::~IConsole() = default;
+Console::~Console() = default;

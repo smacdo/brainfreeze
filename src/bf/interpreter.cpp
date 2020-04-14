@@ -15,7 +15,7 @@ Interpreter::Interpreter(std::vector<instruction_t> instructions)
 //---------------------------------------------------------------------------------------------------------------------
 Interpreter::Interpreter(
         std::vector<instruction_t> instructions,
-        std::unique_ptr<IConsole> console)
+        std::unique_ptr<Console> console)
     : instructions_(std::move(instructions)),
       console_(std::move(console))
 {
@@ -53,7 +53,7 @@ void Interpreter::start()
 {
     // TODO: If console required check that it is defined.
     assert(console_ != nullptr);
-    memory_.resize(cellCount_ * cellSize_);
+    memory_.resize(cellCount_ * cellSize_, 0);
     mp_ = memory_.begin();
     ip_ = instructions_.begin();
 
@@ -107,8 +107,32 @@ Interpreter::RunState Interpreter::runStep()
         break;
 
     case OpcodeType::Read:
-        *mp_ = console_->Read();
+    {
+        auto c = console_->Read();
+
+        if (c == EOF)
+        {
+            switch (endOfStreamBehavior_)
+            {
+            case Interpreter::EndOfStreamBehavior::Zero:
+                c = 0;
+                break;
+
+            case Interpreter::EndOfStreamBehavior::NegativeOne:
+                c = (byte_t)-1;
+                break;
+
+            case Interpreter::EndOfStreamBehavior::NoChange:
+                c = *mp_;
+
+            default: // Use whatever was returned.
+                break;
+            }
+        }
+        
+        *mp_ = c;
         break;
+    }
 
     case OpcodeType::JumpForward:
         // Only execute if byte at data pointer is zero

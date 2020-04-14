@@ -59,19 +59,43 @@ int unguardedMain(int argc, char** argv)
 
     //argparser.setAppCopyright("Brainfreeze (c) 2020 Scott MacDonald");
 
+    
+    std::map<std::string, Interpreter::EndOfStreamBehavior> EOSLookupTable({
+        {"0", Interpreter::EndOfStreamBehavior::Zero},
+        {"zero", Interpreter::EndOfStreamBehavior::Zero},
+        {"negativeone", Interpreter::EndOfStreamBehavior::NegativeOne},
+        {"nochange", Interpreter::EndOfStreamBehavior::NoChange}
+    });
 
     std::string inputFilePath;
+    auto endOfStreamBehavior = Interpreter::EndOfStreamBehavior::NegativeOne;
+
     size_t cellCount = 30000;           // TODO: Use to configure interpreter.
     size_t blockSize = 1;               // TODO: Use to configure interpreter.
+
+    bool convertInputCRLF = false;      // TODO: Set default per platform.
+    bool convertOutputLF = false;
 
     // Parse command line options.
     app.add_option("-f,--file,file", inputFilePath, "Path to Brainfreeze program")->required();
     app.add_option("--cells", cellCount, "Number of memory cells to allocate");     // TODO: Validate.
-    app.add_option("--blockSize", blockSize, "Size of each memory cell in bytes (1, 2, or 4)"); // TODO: Validate.
+    app.add_set("--blockSize", blockSize, { 1, 2, 4 }, "Size of each memory cell in bytes (1, 2, or 4)");
+
+    app.add_option("-e,--eof", endOfStreamBehavior, "End of stream behavior")
+        ->transform(CLI::CheckedTransformer(EOSLookupTable, CLI::ignore_case));
+
+    app.add_flag("--convertInputCRLF,!--no-convertInputCRLF", convertInputCRLF, "TODO");
+    app.add_flag("--convertOutputLF,!--no-convertOutputLF", convertOutputLF, "TODO");
 
     // TODO: Add ability to set null console or read from file or something.
 
     CLI11_PARSE(app, argc, argv);
+
+    // TODO: Create platform specific console.
+    auto console = std::make_unique<WindowsConsole>();
+
+    console->setShouldConvertInputCRtoLF(convertInputCRLF);
+    console->setShouldConvertOutputLFtoCRLF(convertOutputLF);
 
     // Load code from disk.
     // TODO: Manually load the code, and then configure the compiler instead of this oneshot function.
@@ -80,8 +104,8 @@ int unguardedMain(int argc, char** argv)
     // TODO: Print errors from code along with line/column and highlighting.
     auto interpreter = Brainfreeze::Helpers::LoadFromDisk(inputFilePath);
 
-    // TODO: Set platform specific console.
-    interpreter->setConsole(std::make_unique<WindowsConsole>());
+    interpreter->setEndOfStreamBehavior(endOfStreamBehavior);
+    interpreter->setConsole(std::move(console));
 
     interpreter->run();
     
@@ -93,7 +117,8 @@ int main(int argc, char* argv[])
     loguru::g_stderr_verbosity = loguru::Verbosity_OFF;     // Disable writing to stderr.
     loguru::init(argc, argv);
     loguru::g_stderr_verbosity = loguru::Verbosity_OFF;     // Disable writing to stderr.
-    loguru::add_file("output.log", loguru::Truncate, loguru::Verbosity_MAX);    // TODO: Make this configurable.
+    //loguru::add_file("output.log", loguru::Truncate, loguru::Verbosity_MAX);    // TODO: Make this configurable.
+    loguru::add_file("output.log", loguru::Truncate, loguru::Verbosity_0);    // TODO: Make this configurable.
 
     try
     {

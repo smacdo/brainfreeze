@@ -61,25 +61,25 @@ namespace Brainfreeze
         InstructionPointerMatcher InstructionPointerIs(std::size_t expectedAddress);  // TODO: MemoryAdddressIs
         MemoryPointerMatcher MemoryPointerIs(std::size_t expectedAddress);
 
-        class TestableConsole : public IConsole
+        class TestableConsole : public Console
         {
         public:
             TestableConsole(
-                std::function<Interpreter::byte_t(void)>&& readFunc,
-                std::function<void(Interpreter::byte_t)>&& writeFunc);
+                std::function<char(void)>&& readFunc,
+                std::function<void(char)>&& writeFunc);
 
-            virtual void Write(Interpreter::byte_t d) override;
-            virtual Interpreter::byte_t Read() override;
+            virtual void Write(char d) override;
+            virtual char Read() override;
 
-            std::function<Interpreter::byte_t(void)> readFunction() const;
-            void setReadFunction(std::function<Interpreter::byte_t(void)> func);
+            std::function<char(void)> readFunction() const;
+            void setReadFunction(std::function<char(void)> func);
 
-            std::function<void(Interpreter::byte_t)> writeFunction() const;
-            void setWriteFunction(std::function<void(Interpreter::byte_t)> func);
+            std::function<void(char)> writeFunction() const;
+            void setWriteFunction(std::function<void(char)> func);
 
         private:
-            std::function<Interpreter::byte_t(void)> readFunction_;
-            std::function<void(Interpreter::byte_t)> writeFunction_;
+            std::function<char(void)> readFunction_;
+            std::function<void(char)> writeFunction_;
         };
     }
 
