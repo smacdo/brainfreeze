@@ -25,7 +25,7 @@ Input redirection is fully supported, and newline handling can be modified via c
 ```
 
 ## Prerequisites
-A C++ compiler that supports the C++/17 standard, and a recent version of CMake (3.10ish or better).
+A C++ compiler that supports the C++/17 standard, and a recent version of CMake (3.10+).
 
 ## Documentation
 Currently this is all the documentation that exists for Brainfreeze. The readme contains all information on building,
@@ -41,9 +41,21 @@ A high level regression test suite will be written in the future.
 ## Authors
  * **Scott MacDonald** - *Initial work* - [smacdo](https://github.com/smacdo)
 
+## Contributions
+Contributions to the project are always welcome - in particular, please file bug reports especially if you find
+Brainfuck programs that don't seem to work with Brainfreeze. If you unsure about anything just ask -- or submit a
+pull request or issue anyway! The worst that can happen is you will be politely asked to change something. We love all
+friendly contributions!
+
+Please follow the general code style you see in the codebase. Code is expected to follow modern C++/17 best pratices,
+in particular the [ISO C++ Core Guidelines](https://github.com/isocpp/CppCoreGuidelines), and work on all major 
+platforms.
+
+If you would like to get feedback on a change (especially in the early stages of a large or significant change) please
+submit a draft pull request wit the tag [WIP].
+
 ## License
 This project is licensed under the MIT License - see the [LICENSE.txt](LICENSE.txt) file for details.
 
 ## Acknowledgments
---------
  * Urban Müller for creating Brainfuck, without which Brainfreeze wouldn't be possible. 
