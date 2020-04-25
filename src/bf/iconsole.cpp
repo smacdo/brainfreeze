@@ -1,5 +1,5 @@
 // Copyright 2009-2020, Scott MacDonald.
-#include "iconsole.h"
+#include "bf/iconsole.h"
 
 using namespace Brainfreeze;
 

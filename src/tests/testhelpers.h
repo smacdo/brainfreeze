@@ -1,6 +1,6 @@
 #pragma once
-#include "bf.h"
-#include "iconsole.h"
+#include "bf/bf.h"
+#include "bf/iconsole.h"
 
 #include <catch2/catch.hpp>
 #include <string>

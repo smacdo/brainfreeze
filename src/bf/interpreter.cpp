@@ -1,6 +1,6 @@
 // Copyright 2009-2020, Scott MacDonald.
-#include "bf.h"
-#include "iconsole.h"
+#include "bf/bf.h"
+#include "bf/iconsole.h"
 
 #include <cassert>
 #include <stdexcept>

@@ -1,5 +1,5 @@
 // Copyright 2009-2020, Scott MacDonald.
-#include "bf.h"
+#include "bf/bf.h"
 #include "windows_console.h"        // TODO: Make one for each platform
 
 #include <CLI11/CLI11.hpp>

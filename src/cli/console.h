@@ -1,6 +1,6 @@
 // Copyright 2009-2020, Scott MacDonald.
 #pragma once
-#include "iconsole.h"
+#include "bf/iconsole.h"
 #include <string_view>
 
 namespace Brainfreeze::CommandLineApp
