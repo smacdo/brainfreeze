@@ -7,6 +7,8 @@
 #include <string>
 #include <functional>
 
+#include "iconsole.h"
+
 namespace Brainfreeze
 {
     constexpr char* Version = "0.2";
@@ -29,7 +31,7 @@ namespace Brainfreeze
         FastJumpBack = 12
     };
 
-    class Console;
+    class IConsole;
 
     /** The brainfreeze interpreter. */
     class Interpreter
@@ -114,7 +116,10 @@ namespace Brainfreeze
         /** Construct interpreter with code to be run. */
         Interpreter(
             std::vector<instruction_t> instructions,
-            std::unique_ptr<Console> console);
+            std::unique_ptr<IConsole> console);
+
+        /** Destructor. */
+        ~Interpreter();
 
     public:
         /** Get the number of memory cells to allocate for execution. */
@@ -136,10 +141,10 @@ namespace Brainfreeze
         void setEndOfStreamBehavior(EndOfStreamBehavior behavior) noexcept { endOfStreamBehavior_ = behavior; }
 
         /** Get the console used by the interpreter. */
-        Console* console() const { return console_.get(); }
+        IConsole* console() const { return console_.get(); }
 
         /** Set the console used by the interpreter. */
-        void setConsole(std::unique_ptr<Console> console) { console_ = std::move(console); }
+        void setConsole(std::unique_ptr<IConsole> console) { console_ = std::move(console); }
 
     public:
         /** Execute the Brainfreeze program and do not return until execution has finished. */
@@ -179,7 +184,7 @@ namespace Brainfreeze
         std::size_t cellSize_ = 1;
         EndOfStreamBehavior endOfStreamBehavior_ = EndOfStreamBehavior::NegativeOne;
 
-        std::unique_ptr<Console> console_;
+        std::unique_ptr<IConsole> console_;
     };
 
     /** Compiles Brainfreeze code into executable instructions. */
@@ -256,43 +261,6 @@ namespace Brainfreeze
 
     private:
         uint32_t data_ = 0;
-    };
-
-    /** Abstracts console window handling from the interpreter. */
-    class Console
-    {
-    public:
-        /** Destructor. */
-        virtual ~Console();
-
-        /** Get if characters should be echoed when typed. */
-        bool shouldEchoCharForInput() const noexcept { return bEchoCharWhenReading_; }
-
-        /** Set if characters should be echoed when typed. */
-        void setShouldEchoCharForInput(bool newValue) noexcept { bEchoCharWhenReading_ = newValue; }
-
-        /** Get if CR (\r and \r\n) should be converted to LF (\n) when read from input. */
-        bool shouldConvertInputCRtoLF() const noexcept { return bConvertInputCRtoLF_; }
-
-        /** Set if CR (\r and \r\n) should be converted to LF (\n) when read from input. */
-        void setShouldConvertInputCRtoLF(bool newValue) noexcept { bConvertInputCRtoLF_ = newValue; }
-
-        /** Get if LF (\n) should be converted to CRLF (\r\n) when written to output. */
-        bool shouldConvertOutputLFtoCRLF() const noexcept { return bConvertOutputLFtoCRLF_; }
-
-        /** Set if LF (\n) should be converted to CRLF (\r\n) when written to output. */
-        void setShouldConvertOutputLFtoCRLF(bool newValue) noexcept { bConvertOutputLFtoCRLF_ = newValue; }
-
-        /** Default write implementation: writes a byte to standard output. */
-        virtual void Write(char d) = 0;
-
-        /** Default read implementation: reads a byte from standard input. */
-        virtual char Read() = 0;
-
-    private:
-        bool bEchoCharWhenReading_ = true;
-        bool bConvertInputCRtoLF_ = true;
-        bool bConvertOutputLFtoCRLF_ = true;
     };
 
     namespace Helpers

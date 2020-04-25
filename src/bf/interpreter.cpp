@@ -1,5 +1,6 @@
 // Copyright 2009-2020, Scott MacDonald.
 #include "bf.h"
+#include "iconsole.h"
 
 #include <cassert>
 #include <stdexcept>
@@ -15,11 +16,14 @@ Interpreter::Interpreter(std::vector<instruction_t> instructions)
 //---------------------------------------------------------------------------------------------------------------------
 Interpreter::Interpreter(
         std::vector<instruction_t> instructions,
-        std::unique_ptr<Console> console)
+        std::unique_ptr<IConsole> console)
     : instructions_(std::move(instructions)),
       console_(std::move(console))
 {
 }
+
+//---------------------------------------------------------------------------------------------------------------------
+Interpreter::~Interpreter() = default;
 
 //---------------------------------------------------------------------------------------------------------------------
 void Interpreter::setCellCount(size_t count)
@@ -103,12 +107,12 @@ Interpreter::RunState Interpreter::runStep()
         break;
 
     case OpcodeType::Write:
-        console_->Write(*mp_);
+        console_->write(*mp_);
         break;
 
     case OpcodeType::Read:
     {
-        auto c = console_->Read();
+        auto c = console_->read();
 
         if (c == EOF)
         {

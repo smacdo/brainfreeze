@@ -1,10 +1,10 @@
 // Copyright 2009-2020, Scott MacDonald.
 #pragma once
-#include "bf.h"
+#include "console.h"
 #include <Windows.h>
 #include <queue>
 
-namespace Brainfreeze
+namespace Brainfreeze::CommandLineApp
 {
     /** Windows specific console implementation. */
     class WindowsConsole : public Console
@@ -14,10 +14,37 @@ namespace Brainfreeze
         virtual ~WindowsConsole();
 
         /** Write a byte to the Windows console. */
-        virtual void Write(char d) override;
+        virtual void write(char d) override;
 
         /** Read a byte from the Windows console. */
-        virtual char Read() override;
+        virtual char read() override;
+
+        /** Check if input is redirected from the console. */
+        virtual bool isInputRedirected() const override;
+
+        /** Check if output is redirected from the console. */
+        virtual bool isOutputRedirected() const override;
+
+        /** Set the text color for future text printed to the console. */
+        virtual void setTextColor(AnsiColor foreground, AnsiColor background) override;
+
+        /** Set the foreground color for future text printed to the console. */
+        virtual void setTextForegroundColor(AnsiColor color) override;
+
+        /** Set the background color for future text printed to the console. */
+        virtual void setTextBackgroundColor(AnsiColor color) override;
+
+        /** Reset text color to colors at console initialization. */
+        virtual void resetTextColors() override;
+
+        /** Reset text foreground color to foreground color at console initialization. */
+        virtual void resetTextForegroundColor() override;
+
+        /** Reset text foreground color to foreground color at console initialization. */
+        virtual void resetTextBackgroundColor() override;
+
+        /** Set window title. */
+        virtual void setTitle(std::string_view title) override;
 
     private:
         void ReadBuffered(bool waitForCharacter = false);
@@ -36,15 +63,21 @@ namespace Brainfreeze
         HANDLE outputHandle_ = INVALID_HANDLE_VALUE;
 
         /// Get if input handle is reading from console input buffer (true) or a redirected input stream (false).
-        bool bIsConsoleInput = true;
+        bool bIsConsoleInput_ = true;
 
         /// Get if output handle is writing to console output buffer (true) or a redirected output stream (false).
-        bool bIsConsoleOutput = true;
+        bool bIsConsoleOutput_ = true;
 
         /// Saved console input mode from prior to instantiating the console.
-        DWORD prevConsoleInputMode = 0;
+        DWORD prevConsoleInputMode_ = 0;
 
         /// Saved console output mode from prior to instantiating the console.
-        DWORD prevConsoleOutputMode = 0;
+        DWORD prevConsoleOutputMode_ = 0;
+
+        /// Saved console output character attributes from prior to instantiating the console.
+        WORD prevConsoleOutputCharAttributes_ = 0;
+        AnsiColor currentTextForegroundColor_ = AnsiColor::Black;
+        AnsiColor currentTextBackgroundColor_ = AnsiColor::Black;
+        std::string windowTitle_;
     };
 }

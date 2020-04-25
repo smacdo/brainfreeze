@@ -1,7 +1,7 @@
 // Copyright 2009-2020, Scott MacDonald.
-#include "bf.h"
+#include "iconsole.h"
 
 using namespace Brainfreeze;
 
 //---------------------------------------------------------------------------------------------------------------------
-Console::~Console() = default;
+IConsole::~IConsole() = default;

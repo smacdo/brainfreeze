@@ -1,5 +1,6 @@
 #pragma once
 #include "bf.h"
+#include "iconsole.h"
 
 #include <catch2/catch.hpp>
 #include <string>
@@ -61,15 +62,15 @@ namespace Brainfreeze
         InstructionPointerMatcher InstructionPointerIs(std::size_t expectedAddress);  // TODO: MemoryAdddressIs
         MemoryPointerMatcher MemoryPointerIs(std::size_t expectedAddress);
 
-        class TestableConsole : public Console
+        class TestableConsole : public IConsole
         {
         public:
             TestableConsole(
                 std::function<char(void)>&& readFunc,
                 std::function<void(char)>&& writeFunc);
 
-            virtual void Write(char d) override;
-            virtual char Read() override;
+            virtual void write(char d) override;
+            virtual char read() override;
 
             std::function<char(void)> readFunction() const;
             void setReadFunction(std::function<char(void)> func);

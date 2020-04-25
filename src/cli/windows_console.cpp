@@ -8,9 +8,80 @@
 #include <cassert>
 
 #include <Windows.h>
+#include <iostream> // TODO: REMOVE
 
 using namespace Brainfreeze;
+using namespace Brainfreeze::CommandLineApp;
+
 // TODO: ReadFile is not sufficient for console input, it does not return until enter is pushed!
+//---------------------------------------------------------------------------------------------------------------------
+namespace
+{
+    struct ansi_color_info_t
+    {
+        ansi_color_info_t(const char* name, WORD foreground, WORD background)
+            : name(name), foreground(foreground), background(background)
+        {
+        }
+
+        const char* name;
+        WORD foreground;
+        WORD background;
+    };
+
+    /** Table of ansi colors mapped to their Windows foreground and background character attribute values. */
+    std::array<ansi_color_info_t, AnsiColorCount> GAnsiColorTable
+    {
+        ansi_color_info_t { "Black",         0, 0  << 4 },
+        ansi_color_info_t { "DarkRed",       4, 4  << 4 },
+        ansi_color_info_t { "DarkGreen",     2, 2  << 4 },
+        ansi_color_info_t { "DarkYellow",    6, 6  << 4 },
+        ansi_color_info_t { "DarkBlue",      1, 1  << 4 },
+        ansi_color_info_t { "DarkMagenta",   5, 5  << 4 },
+        ansi_color_info_t { "DarkCyan",      3, 3  << 4 },
+        ansi_color_info_t { "BrightGray",    7, 7  << 4 },
+        ansi_color_info_t { "DarkGray",      8, 8  << 4 },
+        ansi_color_info_t { "LightRed",     12, 12 << 4 },
+        ansi_color_info_t { "LightGreen",   10, 10 << 4 },
+        ansi_color_info_t { "LightYellow",  14, 14 << 4 },
+        ansi_color_info_t { "LightBlue",     9, 9  << 4 },
+        ansi_color_info_t { "LightMagenta", 13, 13 << 4 },
+        ansi_color_info_t { "LightCyan",    11, 11 << 4 },
+        ansi_color_info_t { "White",        15, 15 << 4 }
+    };
+
+    /** Takes a Windows character attribute word value, extracts the foreground color and converts it to AnsiColor. */
+    constexpr AnsiColor ExtractForegroundColor(WORD charAttributes)
+    {
+        auto foregroundColor = (charAttributes & 15);
+
+        for (size_t i = 0; i < GAnsiColorTable.size(); ++i)
+        {
+            if (GAnsiColorTable[i].foreground == foregroundColor)
+            {
+                return static_cast<AnsiColor>(i);
+            }
+        }
+
+        throw std::runtime_error("Failed to find match for foreground color in lookup table");
+    }
+
+    /** Takes a Windows character attribute word value, extracts the background color and converts it to AnsiColor. */
+    constexpr AnsiColor ExtractBackgroundColor(WORD charAttributes)
+    {
+        auto backgroundColor = (charAttributes & (15 << 4));
+
+        for (size_t i = 0; i < GAnsiColorTable.size(); ++i)
+        {
+            if (GAnsiColorTable[i].background == backgroundColor)
+            {
+                return static_cast<AnsiColor>(i);
+            }
+        }
+
+        throw std::runtime_error("Failed to find match for background color in lookup table");
+    }
+}
 
 //---------------------------------------------------------------------------------------------------------------------
 WindowsConsole::WindowsConsole()
@@ -31,27 +102,45 @@ WindowsConsole::WindowsConsole()
 
     // Save the current console mode (and restore when finished) but only if input / output is a terminal. Otherwise
     // either input or output is redirected and should not be treated as a console terminal.
-    bIsConsoleInput = (GetFileType(inputHandle_) == FILE_TYPE_CHAR);
-    bIsConsoleOutput = (GetFileType(outputHandle_) == FILE_TYPE_CHAR);
+    bIsConsoleInput_ = (GetFileType(inputHandle_) == FILE_TYPE_CHAR);
+    bIsConsoleOutput_ = (GetFileType(outputHandle_) == FILE_TYPE_CHAR);
 
-    if (bIsConsoleInput && !GetConsoleMode(inputHandle_, &prevConsoleInputMode))
+    if (bIsConsoleInput_ && !GetConsoleMode(inputHandle_, &prevConsoleInputMode_))
     {
         throw std::runtime_error("Failed to save console input mode");
     }
 
-    if (bIsConsoleOutput && !GetConsoleMode(outputHandle_, &prevConsoleOutputMode))
+    if (bIsConsoleOutput_ && !GetConsoleMode(outputHandle_, &prevConsoleOutputMode_))
     {
         throw std::runtime_error("Failed to save console output mode");
     }
 
+    // Save the current console output character attributes if output is not redirected.
+    if (bIsConsoleOutput_)
+    {
+        CONSOLE_SCREEN_BUFFER_INFO screenInfo;
+
+        if (!GetConsoleScreenBufferInfo(outputHandle_, &screenInfo))
+        {
+            throw std::runtime_error("Failed to save output character attributes");
+        }
+
+        prevConsoleOutputCharAttributes_ = screenInfo.wAttributes;
+
+        // Set current text foreground and background colors.
+        currentTextForegroundColor_ = ExtractForegroundColor(prevConsoleOutputCharAttributes_);
+        currentTextBackgroundColor_ = ExtractBackgroundColor(prevConsoleOutputCharAttributes_);
+    }
+
     // Disable line input mode when we are attached to console input. This flag tells ReadFile to block until a
     // carriage return is read which prevents us from getting single character values.
-    if (bIsConsoleInput)
+    if (bIsConsoleInput_)
     {
-        DWORD newInputMode = prevConsoleInputMode & ~ENABLE_LINE_INPUT & ~ENABLE_ECHO_INPUT;
+        DWORD newInputMode = prevConsoleInputMode_ & ~ENABLE_LINE_INPUT & ~ENABLE_ECHO_INPUT;
 
         if (!SetConsoleMode(inputHandle_, newInputMode))
         {
+            // TODO: Throw all exceptions with an error message like this.
             std::string message = "Failed to disable ENABLE_LINE_INPUT for console input";
             message += std::to_string(GetLastError());
 
@@ -66,19 +155,20 @@ WindowsConsole::WindowsConsole()
 WindowsConsole::~WindowsConsole()
 {
     // Restore potentially modified console i/o modes.
-    if (bIsConsoleInput && inputHandle_ != INVALID_HANDLE_VALUE)
+    if (bIsConsoleInput_ && inputHandle_ != INVALID_HANDLE_VALUE)
     {
-        SetConsoleMode(inputHandle_, prevConsoleInputMode);
+        SetConsoleMode(inputHandle_, prevConsoleInputMode_);
     }
 
-    if (bIsConsoleOutput && outputHandle_ != INVALID_HANDLE_VALUE)
+    if (bIsConsoleOutput_ && outputHandle_ != INVALID_HANDLE_VALUE)
     {
-        SetConsoleMode(outputHandle_, prevConsoleOutputMode);
+        SetConsoleMode(outputHandle_, prevConsoleOutputMode_);
+        SetConsoleTextAttribute(outputHandle_, prevConsoleOutputCharAttributes_);
     }
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-void WindowsConsole::Write(char d)
+void WindowsConsole::write(char d)
 {
     LOG_F(1, "Writing char %d '%c'", (int)d, (char)d);
 
@@ -99,8 +189,14 @@ void WindowsConsole::Write(char d)
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-char WindowsConsole::Read()
+char WindowsConsole::read()
 {
+    // Indicate to user that Brainfreeze is waiting for their input.
+    if (!isInputRedirected())
+    {
+        SetConsoleTitleA("Brainfreeze (waiting for input...)");
+    }
+    
     // Acquire more characters from the input stream.
     LOG_F(1, "BF read requested");
     ReadBuffered();
@@ -136,9 +232,16 @@ char WindowsConsole::Read()
     // Echo character if requested.
     if (shouldEchoCharForInput())
     {
-        Write(c);
+        write(c);
     }
 
+    // Restore old title.
+    if (!isInputRedirected())
+    {
+        setTitle(windowTitle_);
+    }
+
+    // TODO: Remove all these log statements.
     LOG_F(2, "Returning char %d '%c'", (int)c, (char)c);
     return c;
 }
@@ -174,7 +277,7 @@ void WindowsConsole::ReadBuffered(bool waitForCharacter)
         {
             throw std::runtime_error("Failed to read input; ReadConsoleInput returned false");
         }
-    } while ((waitForCharacter || (bIsConsoleInput && waitForCharacter) && inputBuffer.empty()));
+    } while ((waitForCharacter || (bIsConsoleInput_ && waitForCharacter) && inputBuffer.empty()));
 
     // Copy all characters into the character buffer.
     assert(numBytesRead <= inputBuffer.size());
@@ -192,4 +295,69 @@ void WindowsConsole::ClearInputBuffer()
     {
         bufferedChars_.pop();
     }
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+bool WindowsConsole::isInputRedirected() const
+{
+    return !bIsConsoleInput_;
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+bool WindowsConsole::isOutputRedirected() const
+{
+    return !bIsConsoleOutput_;
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+void WindowsConsole::setTextColor(AnsiColor foreground, AnsiColor background)
+{
+    if (!isOutputRedirected())
+    {
+        assert(outputHandle_ != INVALID_HANDLE_VALUE);
+
+        auto color = GAnsiColorTable[(int)foreground].foreground | GAnsiColorTable[(int)background].background;
+        SetConsoleTextAttribute(outputHandle_, (WORD)color);
+
+        currentTextForegroundColor_ = foreground;
+        currentTextBackgroundColor_ = background;
+    }
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+void WindowsConsole::setTextForegroundColor(AnsiColor color)
+{
+    setTextColor(color, currentTextBackgroundColor_);
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+void WindowsConsole::setTextBackgroundColor(AnsiColor color)
+{
+    setTextColor(currentTextForegroundColor_, color);
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+void WindowsConsole::resetTextColors()
+{
+    resetTextForegroundColor();
+    resetTextBackgroundColor();
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+void WindowsConsole::resetTextForegroundColor()
+{
+    setTextForegroundColor(ExtractForegroundColor(prevConsoleOutputCharAttributes_));
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+void WindowsConsole::resetTextBackgroundColor()
+{
+    setTextBackgroundColor(ExtractBackgroundColor(prevConsoleOutputCharAttributes_));
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+void WindowsConsole::setTitle(std::string_view title)
+{
+    SetConsoleTitleA(title.data());
+    windowTitle_ = title;
 }

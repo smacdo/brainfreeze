@@ -5,10 +5,9 @@ project(brainfreeze-interpreter)
 cmake_policy(SET CMP0092 NEW)
 
 set(SOURCES
-	bf.cpp
 	compiler.cpp
-	console.cpp
 	helpers.cpp
+	iconsole.cpp
 	instruction.cpp
 	interpreter.cpp
 	bf/bf.h)

@@ -9,6 +9,7 @@
 #include <fstream>
 
 using namespace Brainfreeze;
+using namespace Brainfreeze::CommandLineApp;
 
 //---------------------------------------------------------------------------------------------------------------------
 int unguardedMain(int argc, char** argv)
@@ -90,6 +91,7 @@ int unguardedMain(int argc, char** argv)
 
     console->setShouldConvertInputCRtoLF(convertInputCRLF);
     console->setShouldConvertOutputLFtoCRLF(convertOutputLF);
+    console->setTitle(std::string("Brainfreeze: " + inputFilePath));
 
     // Load code from disk.
     // TODO: Print an error if code failed to load.

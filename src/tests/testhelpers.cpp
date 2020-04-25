@@ -211,13 +211,13 @@ TestableConsole::TestableConsole(
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-void TestableConsole::Write(char d)
+void TestableConsole::write(char d)
 {
     writeFunction_(d);
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-char TestableConsole::Read()
+char TestableConsole::read()
 {
     return readFunction_();
 }
