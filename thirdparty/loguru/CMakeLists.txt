@@ -9,3 +9,8 @@ add_library(loguru STATIC src/loguru.cpp)
 target_include_directories(loguru PUBLIC include)
 target_compile_features(loguru PUBLIC cxx_std_17)
 set_target_properties(loguru PROPERTIES CXX_EXTENSIONS OFF)
+
+if(UNIX)
+	find_package(Threads)
+	target_link_libraries(loguru Threads::Threads dl)
+endif()
