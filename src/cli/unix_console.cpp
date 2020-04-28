@@ -11,10 +11,19 @@ using namespace Brainfreeze;
 using namespace Brainfreeze::CommandLineApp;
 
 //---------------------------------------------------------------------------------------------------------------------
-UnixConsole::UnixConsole() = default;
+UnixConsole::UnixConsole()
+{
+    // Save old terminal parameters so they can be restored when this console instance is destroyed.
+    if (tcgetattr(0, &oldTerminalParams_))
+    {
+        throw std::runtime_error("TODO get error and report that tcgetattr broken");
+    }
+}
 
 //---------------------------------------------------------------------------------------------------------------------
-UnixConsole::~UnixConsole() = default;
+UnixConsole::~UnixConsole()
+{
+}
 
 //---------------------------------------------------------------------------------------------------------------------
 void UnixConsole::write(char d)

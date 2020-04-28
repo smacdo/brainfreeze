@@ -100,19 +100,19 @@ int unguardedMain(int argc, char** argv)
     console->setShouldConvertOutputLFtoCRLF(convertOutputLF);
     console->setTitle(std::string("Brainfreeze: " + inputFilePath));
 
-    // Load code from disk.
-    // TODO: Print an error if code failed to load.
-    // TODO: Print errors from code along with line/column and highlighting.
-    auto interpreter = Brainfreeze::Helpers::LoadFromDisk(inputFilePath);
-
-    interpreter->setCellCount(cellCount);
-    interpreter->setCellSize(blockSize);
-    interpreter->setEndOfStreamBehavior(endOfStreamBehavior);
-    interpreter->setConsole(std::move(console));
-
-    // Execute the Brainfreeze program and report any exceptions that ocurr while loading or running the program.
     try
     {
+        // Load code from disk.
+        // TODO: Print errors from code along with line/column and highlighting.
+        // TODO: Make the compiler configurable (like optimizations).
+        auto interpreter = Brainfreeze::Helpers::LoadFromDisk(inputFilePath);
+
+        interpreter->setCellCount(cellCount);
+        interpreter->setCellSize(blockSize);
+        interpreter->setEndOfStreamBehavior(endOfStreamBehavior);
+        interpreter->setConsole(std::move(console));
+        
+        // Now execute the program
         interpreter->run();
     }
     catch (const CompileException& e)
@@ -120,11 +120,6 @@ int unguardedMain(int argc, char** argv)
         // TODO: Print out the line and highlight the character causing the problem.
         std::cerr << inputFilePath << "(" << e.lineNumber() << "): " << e.what() << std::endl;
         std::cerr << "Execution terminated early because of compile errors" << std::endl;
-        return EXIT_FAILURE;
-    }
-    catch (const std::exception& e)
-    {
-        std::cerr << "*** Uncaught exception: " << e.what() << "***" << std::endl;
         return EXIT_FAILURE;
     }
     
@@ -145,7 +140,7 @@ int main(int argc, char* argv[])
     }
     catch (const std::exception & e)
     {
-        std::cerr << "UNHANDLED EXCEPTION: " << e.what() << std::endl;
+        std::cerr << "*** UNHANDLED EXCEPTION: " << e.what() << "***" << std::endl;
         return EXIT_FAILURE;
     }
 }

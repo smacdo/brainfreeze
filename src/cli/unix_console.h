@@ -2,6 +2,9 @@
 #pragma once
 #include "console.h"
 
+#include <unistd.h>
+#include <termios.h>
+
 namespace Brainfreeze::CommandLineApp
 {
     /** Generic UNIX console implementation. */
@@ -43,5 +46,8 @@ namespace Brainfreeze::CommandLineApp
 
         /** Set window title. */
         virtual void setTitle(std::string_view title) override;
+
+    private:
+        termios oldTerminalParams_;
     };
 }
