@@ -1,5 +1,6 @@
 // Copyright 2009-2020, Scott MacDonald.
 #include "bf/bf.h"
+#include "bf/exceptions.h"
 
 #include <stack>
 #include <cassert>
@@ -18,9 +19,19 @@ std::vector<instruction_t> Compiler::compile(std::string_view programtext) const
     // Track jump targets for optimization (And also report when unbalanced jumps are encountered).
     std::stack<size_t> jumps;
 
+    // Track source code position for error reporting.
+    size_t nextCharIndex = 0;
+    int lineNumber = 1;
+    int columnNumber = 0;
+
     // Convert each legal character in the programtext to its compiled brainfreeze instruction form.    
     for (auto c : programtext)
     {
+        // Track source code position.
+        nextCharIndex++;
+        lineNumber = (c == '\n' ? lineNumber + 1 : lineNumber);
+        columnNumber = (c != '\n' ? columnNumber + 1 : 0);
+
         // Skip characters that are not legal brainfreeze instructions.
         if (!IsInstruction(c))
         {
@@ -54,8 +65,11 @@ std::vector<instruction_t> Compiler::compile(std::string_view programtext) const
             // Throw an exception if there is not a matching forward [ jump.
             if (jumps.empty())
             {
-                // TODO: Show offset of the offending character.
-                throw std::runtime_error("Unbalanced jump, expected a [ before this ]");
+                throw CompileException(
+                    "Unbalanced jump, expected a [ before this ]",
+                    nextCharIndex - 1,
+                    lineNumber,
+                    columnNumber);
             }
 
             // If the jump optimization is enabled upgrade this instruction to a fast jump backward. Search for the
@@ -74,11 +88,14 @@ std::vector<instruction_t> Compiler::compile(std::string_view programtext) const
                 assert(distance > 0);
 
                 // Verify the jump distance is small enough to fit in the instruction parameter.
-                // TODO: How should we handle jump targets that are too big? Is this even a problem?
+                // TODO: This should be supported on the off-chance it is encountered in the real world.
                 if (distance > std::numeric_limits<instruction_t::param_t>::max())
                 {
-                    // TODO: Should the size be included in the message?
-                    throw std::runtime_error("Jump target to large to fit in instruction");
+                    throw CompileException(
+                        "Jump target to large to fit in instruction",
+                        nextCharIndex - 1,
+                        lineNumber,
+                        columnNumber);
                 }
 
                 // Store the offset in the [ instruction.
@@ -116,8 +133,11 @@ std::vector<instruction_t> Compiler::compile(std::string_view programtext) const
     // Verify the jump stack is empty. If not, then there is an unmatched jump somewhere!
     if (!jumps.empty())
     {
-        // TODO: Show offset of the offending character.
-        throw std::runtime_error("Unbalanced jump, expected a ] before program termination");
+        throw CompileException(
+            "Unbalanced jump, expected a ] before program termination",
+            nextCharIndex - 1,
+            lineNumber,
+            columnNumber);
     }
 
     // Insert end of program instruction.

@@ -1,5 +1,6 @@
 // Copyright 2009-2020, Scott MacDonald.
 #include "bf/bf.h"
+#include "bf/exceptions.h"
 #include "windows_console.h"        // TODO: Make one for each platform
 
 #include <CLI11/CLI11.hpp>
@@ -103,7 +104,23 @@ int unguardedMain(int argc, char** argv)
     interpreter->setEndOfStreamBehavior(endOfStreamBehavior);
     interpreter->setConsole(std::move(console));
 
-    interpreter->run();
+    // Execute the Brainfreeze program and report any exceptions that ocurr while loading or running the program.
+    try
+    {
+        interpreter->run();
+    }
+    catch (const CompileException& e)
+    {
+        // TODO: Print out the line and highlight the character causing the problem.
+        std::cerr << inputFilePath << "(" << e.lineNumber() << "): " << e.what() << std::endl;
+        std::cerr << "Execution terminated early because of compile errors" << std::endl;
+        return EXIT_FAILURE;
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << "*** Uncaught exception: " << e.what() << "***" << std::endl;
+        return EXIT_FAILURE;
+    }
     
     return EXIT_SUCCESS;
 }
@@ -114,7 +131,7 @@ int main(int argc, char* argv[])
     loguru::g_stderr_verbosity = loguru::Verbosity_OFF;     // Disable writing to stderr. TODO: It still writes.
     loguru::init(argc, argv);
 
-    loguru::add_file("output.log", loguru::Truncate, loguru::Verbosity_0);    // TODO: Make this configurable.
+    loguru::add_file("output.log", loguru::Truncate, loguru::Verbosity_2);    // TODO: Make this configurable.
 
     try
     {
