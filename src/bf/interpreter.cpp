@@ -1,5 +1,6 @@
 // Copyright 2009-2020, Scott MacDonald.
 #include "bf/bf.h"
+#include "bf/helpers.h"
 #include "bf/iconsole.h"
 
 #include <cassert>

@@ -1,7 +1,13 @@
 // Copyright 2009-2020, Scott MacDonald.
 #include "bf/bf.h"
 #include "bf/exceptions.h"
-#include "windows_console.h"        // TODO: Make one for each platform
+#include "bf/helpers.h"
+
+#if _WIN32
+#   include "windows_console.h"
+#else
+#   include "unix_console.h"
+#endif
 
 #include <CLI11/CLI11.hpp>
 #include <loguru/loguru.hpp>
@@ -87,7 +93,7 @@ int unguardedMain(int argc, char** argv)
 #if _WIN32
     auto console = std::make_unique<WindowsConsole>();
 #else
-#error  "TODO: Implement platform specific console"
+    auto console = std::make_unique<UnixConsole>();
 #endif
 
     console->setShouldConvertInputCRtoLF(convertInputCRLF);

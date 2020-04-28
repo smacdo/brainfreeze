@@ -1,4 +1,6 @@
 // Copyright 2009-2020, Scott MacDonald.
+#include "bf/compiler.h"
+#include "bf/helpers.h"
 #include "bf/bf.h"
 #include "bf/exceptions.h"
 
@@ -89,7 +91,7 @@ std::vector<instruction_t> Compiler::compile(std::string_view programtext) const
 
                 // Verify the jump distance is small enough to fit in the instruction parameter.
                 // TODO: This should be supported on the off-chance it is encountered in the real world.
-                if (distance > std::numeric_limits<instruction_t::param_t>::max())
+                if (distance > (size_t)std::numeric_limits<instruction_t::param_t>::max())
                 {
                     throw CompileException(
                         "Jump target to large to fit in instruction",

@@ -1,4 +1,5 @@
 #include "bf/bf.h"
+#include "bf/helpers.h"
 #include "testhelpers.h"
 #include <catch2/catch.hpp>
 

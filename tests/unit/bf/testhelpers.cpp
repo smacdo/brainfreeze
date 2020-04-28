@@ -1,4 +1,5 @@
 #include "testhelpers.h"
+#include "bf/helpers.h"
 #include <sstream>
 #include <string>
 

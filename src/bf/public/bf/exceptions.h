@@ -23,13 +23,13 @@ namespace Brainfreeze
         }
 
         /** Get the offset from the start of program text of the first character involved in the exxception. */
-        const size_t charOffset() const noexcept { return charOffset_; }
+        size_t charOffset() const noexcept { return charOffset_; }
 
         /** Get the line number where the error happened. */
-        const int lineNumber() const noexcept { return line_; }
+        int lineNumber() const noexcept { return line_; }
 
         /** Get the column number where the error happened. */
-        const int columnNumber() const noexcept { return column_; }
+        int columnNumber() const noexcept { return column_; }
 
     private:
         size_t charOffset_ = 0;

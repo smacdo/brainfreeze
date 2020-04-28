@@ -3,7 +3,6 @@
 #include <catch2/catch.hpp>
 
 using namespace Brainfreeze;
-using namespace Brainfreeze::Helpers;
 using namespace Brainfreeze::TestHelpers;
 
 TEST_CASE("a program with zero characters is valid", "[compiler]")

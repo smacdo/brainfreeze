@@ -1,4 +1,5 @@
 // Copyright 2009-2020, Scott MacDonald.
+#include "bf/helpers.h"
 #include "bf/bf.h"
 
 #include <string>
