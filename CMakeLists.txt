@@ -14,7 +14,5 @@ else()
   add_compile_options(-Wall -Wextra -pedantic -Werror)
 endif()
 
-
-add_subdirectory(src/bf)
-add_subdirectory(src/cli)
-add_subdirectory(src/tests)
+add_subdirectory(tests)
+add_subdirectory(src)
