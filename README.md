@@ -1,6 +1,6 @@
 # Brainfreeze
 A simple and fast Brainfuck interpreter written in C++ for Windows, Linux and MacOS. Brainfreeze aims to have same
-behavior as the original Brainfuck implementation by Urban Müller while providing the ability to change behavior via
+behavior as the original Brainfuck implementation by Urban Mï¿½ller while providing the ability to change behavior via
 command line settings. While the language is fully Turing complete, it is usually only used for entertainment.
 
 ## Getting Started
@@ -25,7 +25,15 @@ Input redirection is fully supported, and newline handling can be modified via c
 ```
 
 ## Prerequisites
-A C++ compiler that supports the C++/17 standard, and a recent version of CMake (3.10+).
+A C++ compiler that supports the C++/17 standard, and a recent version of CMake (3.15+).
+
+### Building on Linux
+
+1. cd path/to/your/checkout
+2. mkdir build && cd build
+3. cmake ../
+4. make
+5. out/src/cli/brainfreeze tests/regression/helloworld.bf
 
 ## Documentation
 Currently this is all the documentation that exists for Brainfreeze. The readme contains all information on building,
@@ -58,4 +66,4 @@ submit a draft pull request wit the tag [WIP].
 This project is licensed under the MIT License - see the [LICENSE.txt](LICENSE.txt) file for details.
 
 ## Acknowledgments
- * Urban Müller for creating Brainfuck, without which Brainfreeze wouldn't be possible. 
+ * Urban Mï¿½ller for creating Brainfuck, without which Brainfreeze wouldn't be possible. 
