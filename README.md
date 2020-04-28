@@ -42,9 +42,16 @@ Wikipedia.
 
 ## Running tests
 CMake will be a unit test project that has adequate test coverage over the compiler and interpreter runtime. Once
-built, you can find the executable in $BUILD_DIR/src/tests/tests.exe
+built, you can find the executable in tests/unit/bf/tests.exe
 
-A high level regression test suite will be written in the future.
+There is also an automated regression test script that acts as an acceptance test suite. You can find it in the scripts folder and run it on the command line. You might have to change the parameters a bit for your environment.
+
+``
+python3 scripts/RunRegressionTests.py build/src/cli/brainfreeze tests/regression/ --outdir testout
+``
+
+If everything goes smoothly you will see a message near the end saying "X/XX tests passed" (yay!). Otherwise, if any tests fail you can find the failing output
+in the outdir directory.
 
 ## Authors
  * **Scott MacDonald** - *Initial work* - [smacdo](https://github.com/smacdo)
