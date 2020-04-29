@@ -5,7 +5,7 @@
 
 namespace Brainfreeze::CommandLineApp
 {
-    /** List of ANSI escape code colors. */
+    /** List of colors supported by ANSI terminal standard. */
     enum class AnsiColor
     {
         Black = 0,
@@ -26,17 +26,44 @@ namespace Brainfreeze::CommandLineApp
         White = 15
     };
 
-    constexpr size_t AnsiColorCount = static_cast<size_t>(AnsiColor::White) + 1;
+    constexpr const size_t AnsiColorCount = static_cast<size_t>(AnsiColor::White) + 1;
+
+    /** List of text formatting options supported by ANSI terminal standard. */
+    enum class AnsiFormatOption
+    {
+        Blink = 0,
+        Bold = 1,
+        Crossout = 2,
+        Invert = 3,
+        Underline = 4
+    };
+
+    constexpr const size_t AnsiFormatOptionCount = static_cast<size_t>(AnsiFormatOption::Underline) + 1;
 
     /** Cross platform console interface. */
     class Console : public IConsole
     {
     public:
+        /** Write a string to standard output. */
+        virtual void write(std::string_view message) = 0;
+
+        /** Write a string to standard output and move to the next line. */
+        virtual void writeLine(std::string_view message) = 0;
+
+        /** Write a string to standard error. */
+        virtual void writeError(std::string_view message) = 0;
+
+        /** write a string to standard error and move to the next line. */
+        virtual void writeErrorLine(std::string_view message) = 0;
+
         /** Check if input is redirected from the console. */
         virtual bool isInputRedirected() const = 0;
 
         /** Check if output is redirected from the console. */
         virtual bool isOutputRedirected() const = 0;
+
+        /** Check if error is redirected from the console. */
+        virtual bool isErrorRedirected() const = 0;
 
         /** Set the text color for future text printed to the console. */
         virtual void setTextColor(AnsiColor foreground, AnsiColor background) = 0;
@@ -46,6 +73,12 @@ namespace Brainfreeze::CommandLineApp
 
         /** Set the background color for future text printed to the console. */
         virtual void setTextBackgroundColor(AnsiColor color) = 0;
+
+        /** Set or remove text formatting flag for future text printed to the console. */
+        virtual void setTextFormat(AnsiFormatOption option, bool shouldEnable = true) = 0;
+
+        /** Remove all text formatting flags for future text printed to the console. */
+        virtual void resetTextFormatting() = 0;
 
         /** Reset text color to colors at console initialization. */
         virtual void resetTextColors() = 0;

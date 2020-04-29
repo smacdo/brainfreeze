@@ -14,6 +14,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <system_error>
 
 using namespace Brainfreeze;
 using namespace Brainfreeze::CommandLineApp;
@@ -138,7 +139,12 @@ int main(int argc, char* argv[])
     {
         return unguardedMain(argc, argv);
     }
-    catch (const std::exception & e)
+    catch (const std::system_error& e)
+    {
+        std::cerr << "*** SYSTEM EXCEPTION: " << e.code() << " - " << e.what() << "***" << std::endl;
+        return EXIT_FAILURE;
+    }
+    catch (const std::exception& e)
     {
         std::cerr << "*** UNHANDLED EXCEPTION: " << e.what() << "***" << std::endl;
         return EXIT_FAILURE;
