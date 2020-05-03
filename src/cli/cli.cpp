@@ -131,7 +131,7 @@ int unguardedMain(int argc, char** argv)
 int main(int argc, char* argv[])
 {
     // Initialize console singleton.
-    GConsole = std::move(CreateConsole());
+    GConsole = CreateConsole();
     
     // Initialize logger.
     loguru::g_stderr_verbosity = loguru::Verbosity_OFF;     // Disable writing to stderr. TODO: It still writes.

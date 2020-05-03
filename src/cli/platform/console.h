@@ -53,6 +53,9 @@ namespace Brainfreeze::CommandLineApp
     class Console : public IConsole
     {
     public:
+        /** Write a single character to standard output. */
+        virtual void write(char c) = 0;
+
         /** Write a string to standard output. */
         virtual void write(
             std::string_view message,
