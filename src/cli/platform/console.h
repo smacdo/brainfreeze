@@ -1,7 +1,9 @@
 // Copyright 2009-2020, Scott MacDonald.
 #pragma once
 #include "bf/iconsole.h"
+
 #include <string_view>
+#include <memory>
 
 namespace Brainfreeze::CommandLineApp
 {
@@ -40,21 +42,26 @@ namespace Brainfreeze::CommandLineApp
 
     constexpr const size_t AnsiFormatOptionCount = static_cast<size_t>(AnsiFormatOption::Underline) + 1;
 
+    /** Output stream name. */
+    enum class OutputStreamName
+    {
+        Stdout,
+        Stderr
+    };
+
     /** Cross platform console interface. */
     class Console : public IConsole
     {
     public:
         /** Write a string to standard output. */
-        virtual void write(std::string_view message) = 0;
+        virtual void write(
+            std::string_view message,
+            OutputStreamName stream = OutputStreamName::Stdout) = 0;
 
         /** Write a string to standard output and move to the next line. */
-        virtual void writeLine(std::string_view message) = 0;
-
-        /** Write a string to standard error. */
-        virtual void writeError(std::string_view message) = 0;
-
-        /** write a string to standard error and move to the next line. */
-        virtual void writeErrorLine(std::string_view message) = 0;
+        virtual void writeLine(
+            std::string_view message,
+            OutputStreamName stream = OutputStreamName::Stdout) = 0;
 
         /** Check if input is redirected from the console. */
         virtual bool isInputRedirected() const = 0;
@@ -66,13 +73,20 @@ namespace Brainfreeze::CommandLineApp
         virtual bool isErrorRedirected() const = 0;
 
         /** Set the text color for future text printed to the console. */
-        virtual void setTextColor(AnsiColor foreground, AnsiColor background) = 0;
+        virtual void setTextColor(
+            AnsiColor foreground,
+            AnsiColor background,
+            OutputStreamName stream = OutputStreamName::Stdout) = 0;
 
         /** Set the foreground color for future text printed to the console. */
-        virtual void setTextForegroundColor(AnsiColor color) = 0;
+        virtual void setTextForegroundColor(
+            AnsiColor color,
+            OutputStreamName stream = OutputStreamName::Stdout) = 0;
 
         /** Set the background color for future text printed to the console. */
-        virtual void setTextBackgroundColor(AnsiColor color) = 0;
+        virtual void setTextBackgroundColor(
+            AnsiColor color,
+            OutputStreamName stream = OutputStreamName::Stdout) = 0;
 
         /** Set or remove text formatting flag for future text printed to the console. */
         virtual void setTextFormat(AnsiFormatOption option, bool shouldEnable = true) = 0;
@@ -92,4 +106,7 @@ namespace Brainfreeze::CommandLineApp
         /** Set window title. */
         virtual void setTitle(std::string_view title) = 0;
     };
+
+    /** Create a new instance of the appropriate platform specific console. */
+    std::unique_ptr<Console> CreateConsole();
 }

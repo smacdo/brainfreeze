@@ -189,25 +189,14 @@ void WindowsConsole::write(char d)
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-void WindowsConsole::write(std::string_view message)
+void WindowsConsole::write(std::string_view message, OutputStreamName stream)
 {
+    // TODO: support LF -> CRLF option for newlines found in message.
     throw std::runtime_error("TODO: Implement me");
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-void WindowsConsole::writeLine(std::string_view message)
-{
-    throw std::runtime_error("TODO: Implement me");
-}
-
-//---------------------------------------------------------------------------------------------------------------------
-void WindowsConsole::writeError(std::string_view message)
-{
-    throw std::runtime_error("TODO: Implement me");
-}
-
-//---------------------------------------------------------------------------------------------------------------------
-void WindowsConsole::writeErrorLine(std::string_view message)
+void WindowsConsole::writeLine(std::string_view message, OutputStreamName stream)
 {
     throw std::runtime_error("TODO: Implement me");
 }
@@ -340,7 +329,7 @@ bool WindowsConsole::isErrorRedirected() const
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-void WindowsConsole::setTextColor(AnsiColor foreground, AnsiColor background)
+void WindowsConsole::setTextColor(AnsiColor foreground, AnsiColor background, OutputStreamName stream)
 {
     if (!isOutputRedirected())
     {
@@ -355,13 +344,13 @@ void WindowsConsole::setTextColor(AnsiColor foreground, AnsiColor background)
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-void WindowsConsole::setTextForegroundColor(AnsiColor color)
+void WindowsConsole::setTextForegroundColor(AnsiColor color, OutputStreamName stream)
 {
     setTextColor(color, currentTextBackgroundColor_);
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-void WindowsConsole::setTextBackgroundColor(AnsiColor color)
+void WindowsConsole::setTextBackgroundColor(AnsiColor color, OutputStreamName stream)
 {
     setTextColor(currentTextForegroundColor_, color);
 }

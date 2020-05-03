@@ -147,42 +147,26 @@ void UnixConsole::write(char d)
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-void UnixConsole::write(std::string_view message)
+void UnixConsole::write(std::string_view message, OutputStreamName stream)
 {
     // TODO: support LF -> CRLF option for newlines found in message.
-    if (fprintf(stdout, "%s", message.data()) == -1)
+    auto handle = (stream == OutputStreamName::Stdout ? stdout : stderr);
+
+    if (fprintf(handle, "%s", message.data()) == -1)
     {
         throw std::system_error(errno, std::generic_category());
     }
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-void UnixConsole::writeLine(std::string_view message)
+void UnixConsole::writeLine(std::string_view message, OutputStreamName stream)
 {
     const char * newline = shouldConvertOutputLFtoCRLF() ? "\r\n" : "\n";
     write(message);
 
-    if (fprintf(stdout, "%s", newline) == -1)
-    {
-        throw std::system_error(errno, std::generic_category());
-    }
-}
+    auto handle = (stream == OutputStreamName::Stdout ? stdout : stderr);
 
-//---------------------------------------------------------------------------------------------------------------------
-void UnixConsole::writeError(std::string_view message)
-{
-    // TODO: support LF -> CRLF option for newlines found in message.
-    if (fprintf(stderr, "%s", message.data()) == -1)
-    {
-        throw std::system_error(errno, std::generic_category());
-    }
-}
-
-//---------------------------------------------------------------------------------------------------------------------
-void UnixConsole::writeErrorLine(std::string_view message)
-{
-    // TODO: support LF -> CRLF option for newlines found in message.
-    if (fprintf(stderr, "%s", message.data()) == -1)
+    if (fprintf(handle, "%s", newline) == -1)
     {
         throw std::system_error(errno, std::generic_category());
     }
@@ -229,27 +213,29 @@ bool UnixConsole::isErrorRedirected() const
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-void UnixConsole::setTextColor(AnsiColor foreground, AnsiColor background)
+void UnixConsole::setTextColor(AnsiColor foreground, AnsiColor background, OutputStreamName stream)
 {
-    setTextForegroundColor(foreground);
-    setTextBackgroundColor(background);
+    setTextForegroundColor(foreground, stream);
+    setTextBackgroundColor(background, stream);
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-void UnixConsole::setTextForegroundColor(AnsiColor color)
+void UnixConsole::setTextForegroundColor(AnsiColor color, OutputStreamName stream)
 {
     if (!isOutputRedirected())
     {
-        fprintf(stdout, "%s", GAnsiColorTable[(size_t)color].foreground);
+        auto handle = (stream == OutputStreamName::Stdout ? stdout : stderr);
+        fprintf(handle, "%s", GAnsiColorTable[(size_t)color].foreground);
     }
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-void UnixConsole::setTextBackgroundColor(AnsiColor color)
+void UnixConsole::setTextBackgroundColor(AnsiColor color, OutputStreamName stream)
 {
     if (!isOutputRedirected())
     {
-        fprintf(stdout, "%s", GAnsiColorTable[(size_t)color].background);
+        auto handle = (stream == OutputStreamName::Stdout ? stdout : stderr);
+        fprintf(handle, "%s", GAnsiColorTable[(size_t)color].background);
     }
 }
 

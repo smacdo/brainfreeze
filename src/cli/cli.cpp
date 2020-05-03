@@ -3,21 +3,19 @@
 #include "bf/exceptions.h"
 #include "bf/helpers.h"
 
-#if _WIN32
-#   include "windows_console.h"
-#else
-#   include "unix_console.h"
-#endif
+#include "platform/console.h"
 
 #include <CLI11/CLI11.hpp>
 #include <loguru/loguru.hpp>
 
-#include <iostream>
+#include <sstream>
 #include <fstream>
 #include <system_error>
 
 using namespace Brainfreeze;
 using namespace Brainfreeze::CommandLineApp;
+
+std::unique_ptr<Console> GConsole = nullptr;
 
 //---------------------------------------------------------------------------------------------------------------------
 int unguardedMain(int argc, char** argv)
@@ -91,11 +89,7 @@ int unguardedMain(int argc, char** argv)
     CLI11_PARSE(app, argc, argv);
 
     // Instantiate a platform specific console handler for reading standard in and writing standard out.
-#if _WIN32
-    auto console = std::make_unique<WindowsConsole>();
-#else
-    auto console = std::make_unique<UnixConsole>();
-#endif
+    auto console = CreateConsole();
 
     console->setShouldConvertInputCRtoLF(convertInputCRLF);
     console->setShouldConvertOutputLFtoCRLF(convertOutputLF);
@@ -119,8 +113,14 @@ int unguardedMain(int argc, char** argv)
     catch (const CompileException& e)
     {
         // TODO: Print out the line and highlight the character causing the problem.
-        std::cerr << inputFilePath << "(" << e.lineNumber() << "): " << e.what() << std::endl;
-        std::cerr << "Execution terminated early because of compile errors" << std::endl;
+        std::stringstream ss;
+
+        ss << inputFilePath << "(" << e.lineNumber() << "): " << e.what() << std::endl;
+        ss << "Execution terminated early because of compile errors" << std::endl;
+
+        GConsole->setTextForegroundColor(AnsiColor::DarkRed, OutputStreamName::Stderr);
+        GConsole->write(ss.str());
+
         return EXIT_FAILURE;
     }
     
@@ -130,23 +130,38 @@ int unguardedMain(int argc, char** argv)
 //---------------------------------------------------------------------------------------------------------------------
 int main(int argc, char* argv[])
 {
+    // Initialize console singleton.
+    GConsole = std::move(CreateConsole());
+    
+    // Initialize logger.
     loguru::g_stderr_verbosity = loguru::Verbosity_OFF;     // Disable writing to stderr. TODO: It still writes.
     loguru::init(argc, argv);
 
     loguru::add_file("output.log", loguru::Truncate, loguru::Verbosity_2);    // TODO: Make this configurable.
 
+    // Enter program main.
     try
     {
         return unguardedMain(argc, argv);
     }
     catch (const std::system_error& e)
     {
-        std::cerr << "*** SYSTEM EXCEPTION: " << e.code() << " - " << e.what() << "***" << std::endl;
+        std::stringstream ss;
+        ss << "*** SYSTEM EXCEPTION: " << e.code() << " - " << e.what() << "***" << std::endl;
+
+        GConsole->setTextForegroundColor(AnsiColor::DarkRed, OutputStreamName::Stderr);
+        GConsole->write(ss.str());
+
         return EXIT_FAILURE;
     }
     catch (const std::exception& e)
     {
-        std::cerr << "*** UNHANDLED EXCEPTION: " << e.what() << "***" << std::endl;
+        std::stringstream ss;
+        ss << "*** UNHANDLED EXCEPTION: " << e.what() << "***" << std::endl;
+
+        GConsole->setTextForegroundColor(AnsiColor::DarkRed, OutputStreamName::Stderr);
+        GConsole->write(ss.str());
+
         return EXIT_FAILURE;
     }
 }
