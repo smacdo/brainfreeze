@@ -4,6 +4,7 @@
 #include "bf/helpers.h"
 
 #include "platform/console.h"
+#include "platform/exception.h"
 
 #include <CLI11/CLI11.hpp>
 #include <loguru/loguru.hpp>
@@ -130,9 +131,6 @@ int unguardedMain(int argc, char** argv)
 //---------------------------------------------------------------------------------------------------------------------
 int main(int argc, char* argv[])
 {
-    // Initialize console singleton.
-    GConsole = CreateConsole();
-    
     // Initialize logger.
     loguru::g_stderr_verbosity = loguru::Verbosity_OFF;     // Disable writing to stderr. TODO: It still writes.
     loguru::init(argc, argv);
@@ -142,26 +140,34 @@ int main(int argc, char* argv[])
     // Enter program main.
     try
     {
+        // Initialize console singleton.
+        GConsole = CreateConsole();
+
         return unguardedMain(argc, argv);
     }
-    catch (const std::system_error& e)
+    catch (const PlatformException& e)
     {
-        std::stringstream ss;
-        ss << "*** SYSTEM EXCEPTION: " << e.code() << " - " << e.what() << "***" << std::endl;
+        std::cerr << "*** UNHANDLED EXCEPTION ***" << std::endl;
+        std::cerr << e.originalMessage() << std::endl;
+        
+        if (e.hasSourceFileName())
+        {
+            std:: cerr << e.sourceFileName() << ":" << e.sourceLineNumber() << std::endl;
+        }
 
-        GConsole->setTextForegroundColor(AnsiColor::DarkRed, OutputStreamName::Stderr);
-        GConsole->write(ss.str());
-
+        // TODO: Rwork this so it sets color and stuff even if GConsole is not initialized.
+        //GConsole->setTextForegroundColor(AnsiColor::DarkRed, OutputStreamName::Stderr);
+        //GConsole->write(ss.str());
         return EXIT_FAILURE;
     }
     catch (const std::exception& e)
     {
-        std::stringstream ss;
-        ss << "*** UNHANDLED EXCEPTION: " << e.what() << "***" << std::endl;
+        std::cerr << "*** UNHANDLED EXCEPTION ***" << std::endl;
+        std::cerr << e.what() << std::endl;
 
-        GConsole->setTextForegroundColor(AnsiColor::DarkRed, OutputStreamName::Stderr);
-        GConsole->write(ss.str());
-
+        // TODO: Rwork this so it sets color and stuff even if GConsole is not initialized.
+        //GConsole->setTextForegroundColor(AnsiColor::DarkRed, OutputStreamName::Stderr);
+        //GConsole->write(ss.str());
         return EXIT_FAILURE;
     }
 }

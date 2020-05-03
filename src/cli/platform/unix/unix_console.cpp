@@ -1,5 +1,6 @@
 // Copyright 2009-2020, Scott MacDonald.
 #include "unix_console.h"
+#include "../exceptions.h"
 #include "bf/bf.h"
 
 #include <stdio.h>
@@ -96,7 +97,7 @@ UnixConsole::UnixConsole()
         // Save old terminal parameters so they can be restored when this console instance is destroyed.
         if (tcgetattr(0, &oldTerminalParams_))
         {
-            throw std::system_error(errno, std::generic_category());
+            throw POSIXException(errno, __FILE__, __LINE__);
         }
 
         // Disable echo and cannonical mode to get unbuffered character input support.
@@ -109,7 +110,7 @@ UnixConsole::UnixConsole()
 
         if (tcsetattr(0, TCSANOW, &terminalParams) != 0)
         {
-            throw std::system_error(errno, std::generic_category());
+            throw POSIXException(errno, __FILE__, __LINE__);
         }
     }
     
@@ -143,7 +144,7 @@ void UnixConsole::write(char d)
     // TODO: support LF -> CRLF option.
     if (fprintf(stdout, "%c", d) == -1)
     {
-        throw std::system_error(errno, std::generic_category());
+        throw POSIXException(errno, __FILE__, __LINE__);
     }
 }
 
@@ -155,7 +156,7 @@ void UnixConsole::write(std::string_view message, OutputStreamName stream)
 
     if (fprintf(handle, "%s", message.data()) == -1)
     {
-        throw std::system_error(errno, std::generic_category());
+        throw POSIXException(errno, __FILE__, __LINE__);
     }
 }
 
@@ -169,7 +170,7 @@ void UnixConsole::writeLine(std::string_view message, OutputStreamName stream)
 
     if (fprintf(handle, "%s", newline) == -1)
     {
-        throw std::system_error(errno, std::generic_category());
+        throw POSIXException(errno, __FILE__, __LINE__);
     }
 }
 
@@ -182,7 +183,7 @@ char UnixConsole::read()
 
     if (::read(0, &c, 1) == -1)
     {
-        throw std::system_error(errno, std::generic_category());
+        throw POSIXException(errno, __FILE__, __LINE__);
     }
 
     // Echo the character if requested.
