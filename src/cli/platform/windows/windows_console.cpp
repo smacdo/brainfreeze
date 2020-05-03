@@ -189,6 +189,19 @@ void WindowsConsole::write(char d)
 }
 
 //---------------------------------------------------------------------------------------------------------------------
+void WindowsConsole::write(std::string_view message, OutputStreamName stream)
+{
+    // TODO: support LF -> CRLF option for newlines found in message.
+    throw std::runtime_error("TODO: Implement me");
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+void WindowsConsole::writeLine(std::string_view message, OutputStreamName stream)
+{
+    throw std::runtime_error("TODO: Implement me");
+}
+
+//---------------------------------------------------------------------------------------------------------------------
 char WindowsConsole::read()
 {
     // Indicate to user that Brainfreeze is waiting for their input.
@@ -310,7 +323,13 @@ bool WindowsConsole::isOutputRedirected() const
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-void WindowsConsole::setTextColor(AnsiColor foreground, AnsiColor background)
+bool WindowsConsole::isErrorRedirected() const
+{
+    throw std::runtime_error("TODO: Implement me");
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+void WindowsConsole::setTextColor(AnsiColor foreground, AnsiColor background, OutputStreamName stream)
 {
     if (!isOutputRedirected())
     {
@@ -325,15 +344,27 @@ void WindowsConsole::setTextColor(AnsiColor foreground, AnsiColor background)
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-void WindowsConsole::setTextForegroundColor(AnsiColor color)
+void WindowsConsole::setTextForegroundColor(AnsiColor color, OutputStreamName stream)
 {
     setTextColor(color, currentTextBackgroundColor_);
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-void WindowsConsole::setTextBackgroundColor(AnsiColor color)
+void WindowsConsole::setTextBackgroundColor(AnsiColor color, OutputStreamName stream)
 {
     setTextColor(currentTextForegroundColor_, color);
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+void WindowsConsole::setTextFormat(AnsiFormatOption option, bool shouldEnable)
+{
+    throw std::runtime_error("TODO: Implement me");
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+void WindowsConsole::resetTextFormatting()
+{
+    throw std::runtime_error("TODO: Implement me");
 }
 
 //---------------------------------------------------------------------------------------------------------------------

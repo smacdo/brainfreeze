@@ -1,6 +1,6 @@
 // Copyright 2009-2020, Scott MacDonald.
 #pragma once
-#include "console.h"
+#include "../console.h"
 #include <Windows.h>
 #include <queue>
 
@@ -16,6 +16,16 @@ namespace Brainfreeze::CommandLineApp
         /** Write a byte to the Windows console. */
         virtual void write(char d) override;
 
+        /** Write a string to standard output. */
+        virtual void write(
+            std::string_view message,
+            OutputStreamName stream = OutputStreamName::Stdout) override;
+
+        /** Write a string to standard output and move to the next line. */
+        virtual void writeLine(
+            std::string_view message,
+            OutputStreamName stream = OutputStreamName::Stdout) override;
+
         /** Read a byte from the Windows console. */
         virtual char read() override;
 
@@ -24,15 +34,31 @@ namespace Brainfreeze::CommandLineApp
 
         /** Check if output is redirected from the console. */
         virtual bool isOutputRedirected() const override;
+        
+        /** Check if error is redirected from the console. */
+        virtual bool isErrorRedirected() const override;
 
         /** Set the text color for future text printed to the console. */
-        virtual void setTextColor(AnsiColor foreground, AnsiColor background) override;
+        virtual void setTextColor(
+            AnsiColor foreground,
+            AnsiColor background,
+            OutputStreamName stream = OutputStreamName::Stdout) override;
 
         /** Set the foreground color for future text printed to the console. */
-        virtual void setTextForegroundColor(AnsiColor color) override;
+        virtual void setTextForegroundColor(
+            AnsiColor color,
+            OutputStreamName stream = OutputStreamName::Stdout) override;
 
         /** Set the background color for future text printed to the console. */
-        virtual void setTextBackgroundColor(AnsiColor color) override;
+        virtual void setTextBackgroundColor(
+            AnsiColor color,
+            OutputStreamName stream = OutputStreamName::Stdout) override;
+            
+        /** Set or remove text formatting flag for future text printed to the console. */
+        virtual void setTextFormat(AnsiFormatOption option, bool shouldEnable = true) override;
+
+        /** Remove all text formatting flags for future text printed to the console. */
+        virtual void resetTextFormatting() override;
 
         /** Reset text color to colors at console initialization. */
         virtual void resetTextColors() override;
