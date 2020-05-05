@@ -1,13 +1,14 @@
 // Copyright 2009-2020, Scott MacDonald.
 #include "bf/helpers.h"
 #include "bf/bf.h"
+#include "bf/exceptions.h"
 
 #include <string>
+#include <filesystem>
 #include <fstream>
 #include <sstream>
 #include <stdexcept>
 #include <cassert>
-#include <iostream> // TODO: REMOVE
 
 using namespace Brainfreeze;
 
@@ -29,29 +30,30 @@ namespace Characters
 //---------------------------------------------------------------------------------------------------------------------
 std::unique_ptr<Interpreter> Brainfreeze::Helpers::LoadFromDisk(const std::string& filename)
 {
-    // Open the text file and read it into a file line by line.
-    // NOTE: If performance ever becomes an issue (doubtful with Brainfreeze programs being so small) this function can
-    //       be optimized to get the file size, allocate a buffer upfront and then read everything into it.
-    std::ifstream infile;
-    std::stringstream sstream;
-    std::string line;
-
-    // TODO: FIXME this throws an exception with getline finding EOF solution read it all at once and avoid
-    //       getline.
-    //infile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-
-    infile.open(filename, std::ios_base::in | std::ios_base::binary);
-
-    while (std::getline(infile, line, '\n'))
+    // Check that the path exists and is a file.
+    if (!std::filesystem::exists(filename))
     {
-        sstream << line;
+        throw CompileException("Path to source code file does not exist", -1, 0, 0);
+    }
+    else if (!std::filesystem::is_regular_file(filename))
+    {
+        throw CompileException("Path to soure code file is not a file", -1, 0, 0);
     }
 
-    std::string code = sstream.str();
+    // Reserve enough space to hold the file and then read it into memory all at once.
+    std::ifstream stream(filename, std::ios::in | std::ios::binary);
+    stream.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+
+    const auto size = std::filesystem::file_size(filename);
+    std::string buffer(size, '\0');
+
+    // Read the whole file into the buffer.
+    stream.read(buffer.data(), size);
 
     // Compile the code into an instruction stream, and then return an interpreter with the instruction stream loaded.
+    // TODO: Make it so the caller can pass options to the compiler.
     Compiler compiler;
-    return std::make_unique<Interpreter>(compiler.compile(code));
+    return std::make_unique<Interpreter>(compiler.compile(buffer));
 }
 
 //---------------------------------------------------------------------------------------------------------------------
