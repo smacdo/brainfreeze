@@ -9,10 +9,6 @@
 #include <CLI11/CLI11.hpp>
 #include <loguru/loguru.hpp>
 
-#include <sstream>
-#include <fstream>
-#include <system_error>
-
 using namespace Brainfreeze;
 using namespace Brainfreeze::CommandLineApp;
 
@@ -38,10 +34,10 @@ int unguardedMain(int argc, char** argv)
     std::string inputFilePath;
     auto endOfStreamBehavior = Interpreter::EndOfStreamBehavior::NegativeOne;
 
-    size_t cellCount = 30000;           // TODO: Use to configure interpreter.
-    size_t blockSize = 1;               // TODO: Use to configure interpreter.
+    size_t cellCount = 30000;
+    size_t blockSize = 1;
 
-    bool convertInputCRLF = false;      // TODO: Set default per platform.
+    bool convertInputCRLF = false;
     bool convertOutputLF = false;
 
     app.add_option("-f,--file,file", inputFilePath)
@@ -89,12 +85,10 @@ int unguardedMain(int argc, char** argv)
     // Parse command line options.
     CLI11_PARSE(app, argc, argv);
 
-    // Instantiate a platform specific console handler for reading standard in and writing standard out.
-    auto console = CreateConsole();
-
-    console->setShouldConvertInputCRtoLF(convertInputCRLF);
-    console->setShouldConvertOutputLFtoCRLF(convertOutputLF);
-    console->setTitle(std::string("Brainfreeze: " + inputFilePath));
+    // Configure the console for Brainfreeze.
+    GConsole->setShouldConvertInputCRtoLF(convertInputCRLF);
+    GConsole->setShouldConvertOutputLFtoCRLF(convertOutputLF);
+    GConsole->setTitle(std::string("Brainfreeze: " + inputFilePath));
 
     try
     {
@@ -106,21 +100,18 @@ int unguardedMain(int argc, char** argv)
         interpreter->setCellCount(cellCount);
         interpreter->setCellSize(blockSize);
         interpreter->setEndOfStreamBehavior(endOfStreamBehavior);
-        interpreter->setConsole(std::move(console));
+        interpreter->setConsole(std::move(GConsole));   // TODO: hmmm this is a problem
         
         // Now execute the program
         interpreter->run();
     }
     catch (const CompileException& e)
     {
+        GConsole->setTextForegroundColor(AnsiColor::LightRed);
+        
         // TODO: Print out the line and highlight the character causing the problem.
-        std::stringstream ss;
-
-        ss << inputFilePath << "(" << e.lineNumber() << "): " << e.what() << std::endl;
-        ss << "Execution terminated early because of compile errors" << std::endl;
-
-        GConsole->setTextForegroundColor(AnsiColor::DarkRed, OutputStreamName::Stderr);
-        GConsole->write(ss.str());
+        std::cerr << inputFilePath << "(" << e.lineNumber() << "): " << e.what() << std::endl;
+        std::cerr << "Execution terminated early because of compile errors" << std::endl;
 
         return EXIT_FAILURE;
     }
@@ -131,43 +122,32 @@ int unguardedMain(int argc, char** argv)
 //---------------------------------------------------------------------------------------------------------------------
 int main(int argc, char* argv[])
 {
-    // Initialize logger.
-    loguru::g_stderr_verbosity = loguru::Verbosity_OFF;     // Disable writing to stderr. TODO: It still writes.
+    // Initialize global logger.
+    loguru::g_stderr_verbosity = loguru::Verbosity_OFF;
     loguru::init(argc, argv);
 
     loguru::add_file("output.log", loguru::Truncate, loguru::Verbosity_2);    // TODO: Make this configurable.
 
-    // Enter program main.
     try
     {
         // Initialize console singleton.
         GConsole = CreateConsole();
-
+        
+        // Enter program main.
         return unguardedMain(argc, argv);
     }
     catch (const PlatformException& e)
     {
-        std::cerr << "*** UNHANDLED EXCEPTION ***" << std::endl;
-        std::cerr << e.originalMessage() << std::endl;
-        
-        if (e.hasSourceFileName())
-        {
-            std:: cerr << e.sourceFileName() << ":" << e.sourceLineNumber() << std::endl;
-        }
-
-        // TODO: Rwork this so it sets color and stuff even if GConsole is not initialized.
-        //GConsole->setTextForegroundColor(AnsiColor::DarkRed, OutputStreamName::Stderr);
-        //GConsole->write(ss.str());
-        return EXIT_FAILURE;
+        GConsole->setTextForegroundColor(AnsiColor::LightRed);
+        std::cerr << "EXCEPTION: " << e.what() << std::endl;
+        return EXIT_FAILURE + 1;
     }
     catch (const std::exception& e)
     {
+        GConsole->setTextForegroundColor(AnsiColor::LightRed);
         std::cerr << "*** UNHANDLED EXCEPTION ***" << std::endl;
         std::cerr << e.what() << std::endl;
 
-        // TODO: Rwork this so it sets color and stuff even if GConsole is not initialized.
-        //GConsole->setTextForegroundColor(AnsiColor::DarkRed, OutputStreamName::Stderr);
-        //GConsole->write(ss.str());
         return EXIT_FAILURE;
     }
 }

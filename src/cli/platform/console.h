@@ -53,18 +53,25 @@ namespace Brainfreeze::CommandLineApp
     class Console : public IConsole
     {
     public:
+        virtual ~Console();
+
         /** Write a single character to standard output. */
-        virtual void write(char c) = 0;
+        virtual void write(char c);
+
+        /** Write a single character to standard output. */
+        virtual void write(char c, OutputStreamName stream) = 0;
 
         /** Write a string to standard output. */
-        virtual void write(
-            std::string_view message,
-            OutputStreamName stream = OutputStreamName::Stdout) = 0;
+        virtual void write(std::string_view message);
+
+        /** Write a string to standard output. */
+        virtual void write(std::string_view message, OutputStreamName stream) = 0;
 
         /** Write a string to standard output and move to the next line. */
-        virtual void writeLine(
-            std::string_view message,
-            OutputStreamName stream = OutputStreamName::Stdout) = 0;
+        virtual void writeLine(std::string_view message);
+
+        /** Write a string to standard output and move to the next line. */
+        virtual void writeLine(std::string_view message, OutputStreamName stream);
 
         /** Check if input is redirected from the console. */
         virtual bool isInputRedirected() const = 0;
@@ -75,21 +82,23 @@ namespace Brainfreeze::CommandLineApp
         /** Check if error is redirected from the console. */
         virtual bool isErrorRedirected() const = 0;
 
+        /** Check if input is being read directly from the terminal (not redirected). */
+        bool isRawInput() const;
+
+        /** Check if standard output is being written directly to the terminal (not redirected). */
+        bool isRawOutput() const;
+        
+        /** Check if error output is being written directly to the terminal (not redirected). */
+        bool isRawError() const;
+
         /** Set the text color for future text printed to the console. */
-        virtual void setTextColor(
-            AnsiColor foreground,
-            AnsiColor background,
-            OutputStreamName stream = OutputStreamName::Stdout) = 0;
+        virtual void setTextColor(AnsiColor foreground, AnsiColor background) = 0;
 
         /** Set the foreground color for future text printed to the console. */
-        virtual void setTextForegroundColor(
-            AnsiColor color,
-            OutputStreamName stream = OutputStreamName::Stdout) = 0;
+        virtual void setTextForegroundColor(AnsiColor color) = 0;
 
         /** Set the background color for future text printed to the console. */
-        virtual void setTextBackgroundColor(
-            AnsiColor color,
-            OutputStreamName stream = OutputStreamName::Stdout) = 0;
+        virtual void setTextBackgroundColor(AnsiColor color) = 0;
 
         /** Set or remove text formatting flag for future text printed to the console. */
         virtual void setTextFormat(AnsiFormatOption option, bool shouldEnable = true) = 0;

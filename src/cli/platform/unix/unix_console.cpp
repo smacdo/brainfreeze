@@ -1,13 +1,12 @@
 // Copyright 2009-2020, Scott MacDonald.
 #include "unix_console.h"
 #include "../exceptions.h"
-#include "bf/bf.h"
+
+#include <array>
+#include <cassert>
 
 #include <stdio.h>
 #include <errno.h>
-#include <array>
-
-#include <system_error>
 
 using namespace Brainfreeze;
 using namespace Brainfreeze::CommandLineApp;
@@ -66,7 +65,7 @@ namespace
         ansi_color_info_t { "LightRed",     "\033[91m", "\033[101m" },
         ansi_color_info_t { "LightGreen",   "\033[92m", "\033[102m" },
         ansi_color_info_t { "LightYellow",  "\033[93m", "\033[103m" },
-        ansi_color_info_t { "LightBfalseue",    "\033[94m", "\033[104m" },
+        ansi_color_info_t { "LightBfalseue","\033[94m", "\033[104m" },
         ansi_color_info_t { "LightMagenta", "\033[95m", "\033[105m" },
         ansi_color_info_t { "LightCyan",    "\033[96m", "\033[106m" },
         ansi_color_info_t { "White",        "\033[97m", "\033[107m" },
@@ -93,28 +92,33 @@ UnixConsole::UnixConsole()
 
     // Save input parameters and options so as to be able to restore them when this console instance is destroyed.
     if (!isInputRedirected())
-    {
+    {        
         // Save old terminal parameters so they can be restored when this console instance is destroyed.
-        if (tcgetattr(0, &oldTerminalParams_))
+        if (tcgetattr(0, &oldTerminalParams_) == 0)
         {
-            throw POSIXException(errno, __FILE__, __LINE__);
+            // Disable echo and cannonical mode to get unbuffered character input support.
+            auto terminalParams = oldTerminalParams_;
+
+            terminalParams.c_lflag &= ~ICANON;
+            terminalParams.c_lflag &= ~ECHO;
+            terminalParams.c_cc[VMIN] = 1;
+            terminalParams.c_cc[VTIME] = 0;
+
+            if (tcsetattr(0, TCSANOW, &terminalParams) != 0)
+            {
+                raiseError(errno, "Failed to disable echo and cannonical mode", __FILE__, __LINE__);
+            }
+
+            didChangeTerminalParams = true;
         }
-
-        // Disable echo and cannonical mode to get unbuffered character input support.
-        auto terminalParams = oldTerminalParams_;
-
-        terminalParams.c_lflag &= ~ICANON;
-        terminalParams.c_lflag &= ~ECHO;
-        terminalParams.c_cc[VMIN] = 1;
-        terminalParams.c_cc[VTIME] = 0;
-
-        if (tcsetattr(0, TCSANOW, &terminalParams) != 0)
+        else
         {
-            throw POSIXException(errno, __FILE__, __LINE__);
+            // Failed to save old terminal parameters.
+            raiseError(errno, "Failed to save terminal parameters", __FILE__, __LINE__);
         }
     }
     
-    // Disable output buffer.
+    // Disable output buffering.
     if (!isOutputRedirected())
     {
         setbuf(stdout, NULL);
@@ -125,13 +129,13 @@ UnixConsole::UnixConsole()
 UnixConsole::~UnixConsole()
 {
     // Restore old terminal parameters now that the console is being destroyed.
-    if (!isInputRedirected())
+    if (didChangeTerminalParams)
     {
         tcsetattr(0, TCSADRAIN, &oldTerminalParams_);
     }
 
     // Restore terminal output color and formatting parameters.
-    if (!isOutputRedirected())
+    if (isTextFormattingEnabled_)
     {
         resetTextColors();
         resetTextFormatting();
@@ -139,12 +143,23 @@ UnixConsole::~UnixConsole()
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-void UnixConsole::write(char d)
+void UnixConsole::write(char d, OutputStreamName stream)
 {
-    // TODO: support LF -> CRLF option.
-    if (fprintf(stdout, "%c", d) == -1)
+    auto handle = (stream == OutputStreamName::Stdout ? stdout : stderr);
+    int status = 0;
+
+    if (d == '\n' && shouldConvertOutputLFtoCRLF())
     {
-        throw POSIXException(errno, __FILE__, __LINE__);
+        status = fprintf(handle, "\r\n");
+    }
+    else
+    {
+        status = fprintf(handle, "%c", d);
+    }
+
+    if (status < 0)
+    {
+        raiseError(errno, "Writing a character", __FILE__, __LINE__);
     }
 }
 
@@ -154,23 +169,9 @@ void UnixConsole::write(std::string_view message, OutputStreamName stream)
     // TODO: support LF -> CRLF option for newlines found in message.
     auto handle = (stream == OutputStreamName::Stdout ? stdout : stderr);
 
-    if (fprintf(handle, "%s", message.data()) == -1)
+    if (fprintf(handle, "%.*s", (int)message.size(), message.data()) < 0)
     {
-        throw POSIXException(errno, __FILE__, __LINE__);
-    }
-}
-
-//---------------------------------------------------------------------------------------------------------------------
-void UnixConsole::writeLine(std::string_view message, OutputStreamName stream)
-{
-    const char * newline = shouldConvertOutputLFtoCRLF() ? "\r\n" : "\n";
-    write(message);
-
-    auto handle = (stream == OutputStreamName::Stdout ? stdout : stderr);
-
-    if (fprintf(handle, "%s", newline) == -1)
-    {
-        throw POSIXException(errno, __FILE__, __LINE__);
+        raiseError(errno, "Writing a string", __FILE__, __LINE__);
     }
 }
 
@@ -181,9 +182,9 @@ char UnixConsole::read()
     // Read a single (unbuffered) character from standard in.
     char c = EOF;
 
-    if (::read(0, &c, 1) == -1)
+    if (::read(0, &c, 1) < 0)
     {
-        throw POSIXException(errno, __FILE__, __LINE__);
+        raiseError(errno, "Reading a character", __FILE__, __LINE__);
     }
 
     // Echo the character if requested.
@@ -215,45 +216,41 @@ bool UnixConsole::isErrorRedirected() const
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-void UnixConsole::setTextColor(AnsiColor foreground, AnsiColor background, OutputStreamName stream)
+void UnixConsole::setTextColor(AnsiColor foreground, AnsiColor background)
 {
-    setTextForegroundColor(foreground, stream);
-    setTextBackgroundColor(background, stream);
+    setTextForegroundColor(foreground);
+    setTextBackgroundColor(background);
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-void UnixConsole::setTextForegroundColor(AnsiColor color, OutputStreamName stream)
+void UnixConsole::setTextForegroundColor(AnsiColor color)
 {
-    if (!isOutputRedirected())
+    if (isTextFormattingEnabled_)
     {
-        auto handle = (stream == OutputStreamName::Stdout ? stdout : stderr);
-        fprintf(handle, "%s", GAnsiColorTable[(size_t)color].foreground);
+        printControlCode(GAnsiColorTable[(size_t)color].foreground);
     }
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-void UnixConsole::setTextBackgroundColor(AnsiColor color, OutputStreamName stream)
+void UnixConsole::setTextBackgroundColor(AnsiColor color)
 {
-    if (!isOutputRedirected())
+    if (isTextFormattingEnabled_)
     {
-        auto handle = (stream == OutputStreamName::Stdout ? stdout : stderr);
-        fprintf(handle, "%s", GAnsiColorTable[(size_t)color].background);
+        printControlCode(GAnsiColorTable[(size_t)color].background);
     }
 }
 
 //---------------------------------------------------------------------------------------------------------------------
 void UnixConsole::setTextFormat(AnsiFormatOption option, bool shouldEnable)
 {
-    if (!isOutputRedirected())
+    if (isTextFormattingEnabled_)
     {
-        if (shouldEnable)
-        {
-            fprintf(stdout, "%s", GAnsiFormatOptionTable[(size_t)option].enable);
-        }
-        else
-        {
-            fprintf(stdout, "%s", GAnsiFormatOptionTable[(size_t)option].disable);
-        }
+        // Get the correct control code to either enable or disable the option.
+        const auto& opt = GAnsiFormatOptionTable[(size_t)option];
+        auto code = (shouldEnable ? opt.enable : opt.disable);
+
+        // Now print the format control code to the terminal.
+        printControlCode(code);
     }
 }
 
@@ -276,18 +273,18 @@ void UnixConsole::resetTextColors()
 //---------------------------------------------------------------------------------------------------------------------
 void UnixConsole::resetTextForegroundColor()
 {
-    if (!isOutputRedirected())
+    if (isTextFormattingEnabled_)
     {
-        fprintf(stdout, "\033[39m");
+        printControlCode("\033[39m");
     }
 }
 
 //---------------------------------------------------------------------------------------------------------------------
 void UnixConsole::resetTextBackgroundColor()
 {
-    if (!isOutputRedirected())
+    if (isTextFormattingEnabled_)
     {
-        fprintf(stdout, "\033[49m");
+        printControlCode("\033[49m");
     }
 }
 
@@ -295,4 +292,38 @@ void UnixConsole::resetTextBackgroundColor()
 void UnixConsole::setTitle(std::string_view /*title*/)
 {
     // TODO: Implement stub.
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+void UnixConsole::printControlCode(const char* controlCode)
+{
+    assert(controlCode != nullptr);
+
+    // Only print the control code if there is a valid raw output or error stream.
+    if (isRawOutput() || isRawError())
+    {
+        // Prefer printing to standard out unless it was disabled in which case print to stderr.
+        auto handle = (isRawOutput() ? stdout : stderr);
+        fprintf(handle, "%s", controlCode);
+    }   
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+void UnixConsole::raiseError(int error, const char* action, const char* filename, int lineNumber)
+{
+    auto message = POSIXException::getMessageForError(error);
+
+    if (isTextFormattingEnabled_ && isRawError())
+    {
+        fprintf(stderr, "\033[31m");
+    }
+
+    fprintf(stderr, "[CONSOLE] %s: %s in %s:%d", action, message.c_str(), filename, lineNumber);
+
+    if (isTextFormattingEnabled_ && isRawError())
+    {
+        fprintf(stderr, "\033[39m");
+    }
+
+    fprintf(stderr, "\n");
 }

@@ -9,6 +9,52 @@
 using namespace Brainfreeze::CommandLineApp;
 
 //---------------------------------------------------------------------------------------------------------------------
+Console::~Console() = default;
+
+//---------------------------------------------------------------------------------------------------------------------
+void Console::write(char c)
+{
+    write(c, OutputStreamName::Stdout);
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+void Console::write(std::string_view message)
+{
+    write(message, OutputStreamName::Stdout);
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+void Console::writeLine(std::string_view message)
+{
+    writeLine(message, OutputStreamName::Stdout);
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+void Console::writeLine(std::string_view message, OutputStreamName stream)
+{
+    write(message, stream);
+    write('\n', stream);
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+bool Console::isRawInput() const
+{
+    return !isInputRedirected();
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+bool Console::isRawOutput() const
+{
+    return !isOutputRedirected();
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+bool Console::isRawError() const
+{
+    return !isErrorRedirected();
+}
+
+//---------------------------------------------------------------------------------------------------------------------
 std::unique_ptr<Console> Brainfreeze::CommandLineApp::CreateConsole()
 {
 #if _WIN32

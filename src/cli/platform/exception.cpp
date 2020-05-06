@@ -26,7 +26,7 @@ std::string PlatformException::format(
     const char* sourceFileName,
     int sourceLineNumber)
 {
-    if (sourceFileName != nullptr)
+    if (sourceFileName == nullptr)
     {
         return std::string(message.data(), message.length());
     }

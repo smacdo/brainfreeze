@@ -11,21 +11,19 @@ namespace Brainfreeze::CommandLineApp
     class UnixConsole : public Console
     {
     public:
+        using Console::write;
+
+        /** Default constructor. */
         UnixConsole();
+
+        /** Destructor. */
         virtual ~UnixConsole();
 
         /** Write a byte to the console. */
-        virtual void write(char d) override;
+        virtual void write(char d, OutputStreamName stream) override;
 
         /** Write a string to standard output. */
-        virtual void write(
-            std::string_view message,
-            OutputStreamName stream = OutputStreamName::Stdout) override;
-
-        /** Write a string to standard output and move to the next line. */
-        virtual void writeLine(
-            std::string_view message,
-            OutputStreamName stream = OutputStreamName::Stdout) override;
+        virtual void write(std::string_view message, OutputStreamName stream) override;
 
         /** Read a byte from the console. */
         virtual char read() override;
@@ -40,20 +38,13 @@ namespace Brainfreeze::CommandLineApp
         virtual bool isErrorRedirected() const override;
 
         /** Set the text color for future text printed to the console. */
-        virtual void setTextColor(
-            AnsiColor foreground,
-            AnsiColor background,
-            OutputStreamName stream = OutputStreamName::Stdout) override;
+        virtual void setTextColor(AnsiColor foreground, AnsiColor background) override;
 
         /** Set the foreground color for future text printed to the console. */
-        virtual void setTextForegroundColor(
-            AnsiColor color,
-            OutputStreamName stream = OutputStreamName::Stdout) override;
+        virtual void setTextForegroundColor(AnsiColor color) override;
 
         /** Set the background color for future text printed to the console. */
-        virtual void setTextBackgroundColor(
-            AnsiColor color,
-            OutputStreamName stream = OutputStreamName::Stdout) override;
+        virtual void setTextBackgroundColor(AnsiColor color) override;
 
         /** Set or remove text formatting flag for future text printed to the console. */
         virtual void setTextFormat(AnsiFormatOption option, bool shouldEnable = true) override;
@@ -74,9 +65,18 @@ namespace Brainfreeze::CommandLineApp
         virtual void setTitle(std::string_view title) override;
 
     private:
+        /** Print a terminal control code to any valid unredirected output stream. */
+        void printControlCode(const char* controlCode);
+
+        /** Raises an underlying system error and displays it to the user. */
+        void raiseError(int error, const char* action, const char* filename, int lineNumber);
+
+    private:
         termios oldTerminalParams_;
+        bool didChangeTerminalParams = false;
         bool isInputRedirected_ = false;
         bool isOutputRedirected_ = false;
         bool isErrorRedirected_ = false;
+        bool isTextFormattingEnabled_ = true;
     };
 }
