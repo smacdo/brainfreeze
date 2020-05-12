@@ -20,6 +20,7 @@ Input redirection is fully supported, and newline handling can be modified via c
         negativeOne         -1 (255) is always returned. This is the default behavior.
 		zero                0 is always returned.
 		nochange            The value in the current cell is left unchanged.
+ --echoInput=1            Write input to output for display
  --convertInputCRLF       Converts CRLF (\r\n) to LF (\n) when reading input. This is the default for Windows.
  --convertOutputLF        Converts LF (\n) to CRLF (\r\n) when writing output. This is the default for Windows.
 ```

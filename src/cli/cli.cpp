@@ -39,6 +39,7 @@ int unguardedMain(int argc, char** argv)
 
     bool convertInputCRLF = false;
     bool convertOutputLF = false;
+    bool shouldEchoInput = true;
 
     app.add_option("-f,--file,file", inputFilePath)
         ->description("Path to Brainfreeze program")
@@ -64,6 +65,11 @@ int unguardedMain(int argc, char** argv)
         ->ignore_underscore()
         ->transform(CLI::CheckedTransformer(EOSLookupTable, CLI::ignore_case));
 
+    app.add_flag("--echoInput", shouldEchoInput)
+        ->description("Write input to output for display")
+        ->default_val(shouldEchoInput)
+        ->ignore_case();
+
     app.add_flag("--convertInputCRLF", convertInputCRLF)
         ->description("Convert Windows style newlines (\\r\\n) to *nix (\\n) when reading input.")
 #if _WIN32
@@ -88,6 +94,7 @@ int unguardedMain(int argc, char** argv)
     // Configure the console for Brainfreeze.
     GConsole->setShouldConvertInputCRtoLF(convertInputCRLF);
     GConsole->setShouldConvertOutputLFtoCRLF(convertOutputLF);
+    GConsole->setShouldEchoCharForInput(shouldEchoInput);
     GConsole->setTitle(std::string("Brainfreeze: " + inputFilePath));
 
     try
@@ -108,7 +115,7 @@ int unguardedMain(int argc, char** argv)
     catch (const CompileException& e)
     {
         GConsole->setTextForegroundColor(AnsiColor::LightRed);
-        
+
         // TODO: Print out the line and highlight the character causing the problem.
         std::cerr << inputFilePath << "(" << e.lineNumber() << "): " << e.what() << std::endl;
         std::cerr << "Execution terminated early because of compile errors" << std::endl;
