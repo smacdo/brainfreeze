@@ -1,4 +1,6 @@
 // Copyright 2009-2020, Scott MacDonald.
+#define DEBUG_TRACE_LOGGING
+
 #include "unix_console.h"
 #include "../exceptions.h"
 
@@ -7,6 +9,10 @@
 
 #include <stdio.h>
 #include <errno.h>
+
+#ifdef DEBUG_TRACE_LOGGING
+#include <loguru/loguru.hpp>
+#endif
 
 using namespace Brainfreeze;
 using namespace Brainfreeze::CommandLineApp;
@@ -84,15 +90,28 @@ namespace
 
 //---------------------------------------------------------------------------------------------------------------------
 UnixConsole::UnixConsole()
+    : Console()
 {
     // Check if standard input/output streams have been redirected.
     isInputRedirected_ = !isatty(STDIN_FILENO);
     isOutputRedirected_ = !isatty(STDOUT_FILENO);
     isErrorRedirected_ = !isatty(STDERR_FILENO);
 
-    // Save input parameters and options so as to be able to restore them when this console instance is destroyed.
-    if (!isInputRedirected())
-    {        
+    if (isInputRedirected())
+    {
+#ifdef DEBUG_TRACE_LOGGING
+        LOG_F(INFO, "Standard input is redirected, disabling echo");
+#endif
+
+        // Do not echo characters when redirecting output.
+        setShouldEchoCharForInput(false);
+    }
+    else
+    {
+#ifdef DEBUG_TRACE_LOGGING
+        LOG_F(INFO, "Raw console input detected");
+#endif
+
         // Save old terminal parameters so they can be restored when this console instance is destroyed.
         if (tcgetattr(0, &oldTerminalParams_) == 0)
         {
@@ -150,10 +169,18 @@ void UnixConsole::write(char d, OutputStreamName stream)
 
     if (d == '\n' && shouldConvertOutputLFtoCRLF())
     {
+#ifdef DEBUG_TRACE_LOGGING
+        LOG_F(INFO, "Write LF with conversion to CRLF (two chars)");
+#endif
+
         status = fprintf(handle, "\r\n");
     }
     else
     {
+#ifdef DEBUG_TRACE_LOGGING
+        LOG_F(INFO, "Write char #%d %c", (int)d, d);
+#endif
+
         status = fprintf(handle, "%c", d);
     }
 
@@ -187,9 +214,16 @@ char UnixConsole::read()
         raiseError(errno, "Reading a character", __FILE__, __LINE__);
     }
 
+#ifdef DEBUG_TRACE_LOGGING
+        LOG_F(INFO, "Read char #%d %c", (int)c, c);
+#endif
+
     // Echo the character if requested.
     if (shouldEchoCharForInput())
     {
+#ifdef DEBUG_TRACE_LOGGING
+        LOG_F(INFO, "Will echo");
+#endif
         write(c);
     }
 

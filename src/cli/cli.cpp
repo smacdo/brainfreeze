@@ -39,7 +39,7 @@ int unguardedMain(int argc, char** argv)
 
     bool convertInputCRLF = false;
     bool convertOutputLF = false;
-    bool shouldEchoInput = true;
+    bool shouldEchoInput = GConsole->shouldEchoCharForInput();
 
     app.add_option("-f,--file,file", inputFilePath)
         ->description("Path to Brainfreeze program")

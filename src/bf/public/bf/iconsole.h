@@ -9,6 +9,9 @@ namespace Brainfreeze
     class IConsole
     {
     public:
+        /** Default constructor. */
+        IConsole() = default;
+
         /** Destructor. */
         virtual ~IConsole();
 
@@ -35,6 +38,9 @@ namespace Brainfreeze
 
         /** Default read implementation: reads a byte from standard input. */
         virtual char read() = 0;
+
+        IConsole(const IConsole&) = delete;
+        IConsole& operator =(const IConsole&) = delete;
 
     private:
         bool bEchoCharWhenReading_ = true;
