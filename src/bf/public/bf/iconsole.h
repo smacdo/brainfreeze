@@ -43,7 +43,7 @@ namespace Brainfreeze
         IConsole& operator =(const IConsole&) = delete;
 
     private:
-        bool bEchoCharWhenReading_ = true;
+        bool bEchoCharWhenReading_ = false;
         bool bConvertInputCRtoLF_ = true;
         bool bConvertOutputLFtoCRLF_ = true;
     };

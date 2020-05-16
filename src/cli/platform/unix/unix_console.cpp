@@ -102,9 +102,6 @@ UnixConsole::UnixConsole()
 #ifdef DEBUG_TRACE_LOGGING
         LOG_F(INFO, "Standard input is redirected, disabling echo");
 #endif
-
-        // Do not echo characters when redirecting output.
-        setShouldEchoCharForInput(false);
     }
     else
     {
@@ -113,24 +110,7 @@ UnixConsole::UnixConsole()
 #endif
 
         // Save old terminal parameters so they can be restored when this console instance is destroyed.
-        if (tcgetattr(0, &oldTerminalParams_) == 0)
-        {
-            // Disable echo and cannonical mode to get unbuffered character input support.
-            auto terminalParams = oldTerminalParams_;
-
-            terminalParams.c_lflag &= ~ICANON;
-            terminalParams.c_lflag &= ~ECHO;
-            terminalParams.c_cc[VMIN] = 1;
-            terminalParams.c_cc[VTIME] = 0;
-
-            if (tcsetattr(0, TCSANOW, &terminalParams) != 0)
-            {
-                raiseError(errno, "Failed to disable echo and cannonical mode", __FILE__, __LINE__);
-            }
-
-            didChangeTerminalParams = true;
-        }
-        else
+        if (tcgetattr(0, &oldTerminalParams_) != 0)
         {
             // Failed to save old terminal parameters.
             raiseError(errno, "Failed to save terminal parameters", __FILE__, __LINE__);
@@ -360,4 +340,98 @@ void UnixConsole::raiseError(int error, const char* action, const char* filename
     }
 
     fprintf(stderr, "\n");
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+void UnixConsole::setInputBuffering(bool isEnabled)
+{
+    // Do not apply any terminal changes if input was redirected.
+    if (isInputRedirected())
+    {
+        return;
+    }
+
+    // Ref: https://stackoverflow.com/a/20482594
+    // Get current terminal parameters.
+    termios terminalParams;
+
+    if (tcgetattr(0, &terminalParams) != 0)
+    {
+        raiseError(errno, "Failed to get terminal parameters", __FILE__, __LINE__);
+        return;
+    }
+
+    // Set/unset cannonical mode to set/unset input buffering.
+    if (isEnabled)
+    {
+        terminalParams.c_lflag &= ~ICANON;
+        terminalParams.c_cc[VMIN] = 1;  // Read that blocks until at least one char is available.
+        terminalParams.c_cc[VTIME] = 0;
+    }
+    else
+    {
+        terminalParams.c_lflag |= ICANON;
+    }
+    
+    // Apply changed terminal paramaters.
+    if (tcsetattr(0, TCSANOW, &terminalParams) != 0)
+    {
+        raiseError(errno, "Failed to set console input buffering (cannonical mode)", __FILE__, __LINE__);
+        return;
+    }
+
+    isInputBuffered_ = isEnabled;
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+bool UnixConsole::isInputBufferingEnabled() const noexcept
+{
+    return isInputBuffered_;
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+void UnixConsole::setInputEchoing(bool isEnabled)
+{
+    IConsole::setShouldEchoCharForInput(isEnabled);
+    
+    // Do not apply any terminal changes if input was redirected.
+    if (isInputRedirected())
+    {
+        return;
+    }
+
+    // Ref: https://stackoverflow.com/a/20482594
+    // Get current terminal parameters.
+    termios terminalParams;
+
+    if (tcgetattr(0, &terminalParams) != 0)
+    {
+        raiseError(errno, "Failed to get terminal parameters", __FILE__, __LINE__);
+        return;
+    }
+
+    // Set/unset cannonical mode to set/unset input buffering.
+    if (isEnabled)
+    {
+        terminalParams.c_lflag &= ~ECHO;
+    }
+    else
+    {
+        terminalParams.c_lflag |= ECHO;
+    }
+    
+    // Apply changed terminal paramaters.
+    if (tcsetattr(0, TCSANOW, &terminalParams) != 0)
+    {
+        raiseError(errno, "Failed to set console input echoing", __FILE__, __LINE__);
+        return;
+    }
+
+    isInputEchoed_ = isEnabled;
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+bool UnixConsole::isInputEchoingEnabled() const noexcept
+{
+    return isInputEchoed_;
 }

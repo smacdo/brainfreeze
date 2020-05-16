@@ -14,15 +14,26 @@ default Brainfreeze will read from standard input (your keyboard) and write to s
 Input redirection is fully supported, and newline handling can be modified via command line flags.
 
 ```
- --cells <count>          The number of memory cells to allocate (default is 30,000).
- --blockSize <byte size>  The size of each memory cell in bytes (1, 2, 4 or 8).
- --eof <behavior>         Change what the interpreter does when read byte encounters the end of the input stream.
-        negativeOne         -1 (255) is always returned. This is the default behavior.
-		zero                0 is always returned.
-		nochange            The value in the current cell is left unchanged.
- --echoInput=1            Write input to output for display
- --convertInputCRLF       Converts CRLF (\r\n) to LF (\n) when reading input. This is the default for Windows.
- --convertOutputLF        Converts LF (\n) to CRLF (\r\n) when writing output. This is the default for Windows.
+Usage: src/cli/brainfreeze [OPTIONS] file
+
+Positionals:
+  file <path/to/file.bf> REQUIRED
+                              Path to Brainfreeze program
+Options:
+  -h,--help                   Print this help message and exit
+  -f,--file <path/to/file.bf> REQUIRED
+                              Path to Brainfreeze program
+Brainfuck Details:
+  -c,--cells <number>         Number of memory cells
+  -s,--blockSize <number>:{1,2,4,8}
+                              Size of each memory cell in bytes
+  -e,--eof <behavior>:value in {negativeOne->1,nochange->2,zero->0} OR {1,2,0}
+                              End of stream behavior
+Input/Output Behavior:
+  --echoInput=0               Write input to output for display
+  --inputBuffering=1          Enable or disable input line buffering behavior
+  --convertInputCRLF=0        Convert Windows style newlines (\r\n) to *nix (\n) when reading input.
+  --convertOutputLF=0         Convert *nix newlines (\n) to Windows (\r\n) when writing output.
 ```
 
 ## Prerequisites

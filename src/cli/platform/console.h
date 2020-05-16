@@ -117,6 +117,18 @@ namespace Brainfreeze::CommandLineApp
 
         /** Set window title. */
         virtual void setTitle(std::string_view title) = 0;
+
+        /** Set if console should handle raw unbuffered console input. */
+        virtual void setInputBuffering(bool isEnabled) = 0;
+
+        /** Get if console input buffering is handled. */
+        virtual bool isInputBufferingEnabled() const noexcept = 0;
+
+        /** Set if characters are echoed when typed. */
+        virtual void setInputEchoing(bool isEnabled) = 0;
+
+        /** Get if characters are echoed when typed. */
+        virtual bool isInputEchoingEnabled() const noexcept = 0;
     };
 
     /** Create a new instance of the appropriate platform specific console. */

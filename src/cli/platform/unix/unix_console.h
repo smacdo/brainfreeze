@@ -64,6 +64,18 @@ namespace Brainfreeze::CommandLineApp
         /** Set window title. */
         virtual void setTitle(std::string_view title) override;
 
+        /** Set if console should handle raw unbuffered console input. */
+        virtual void setInputBuffering(bool isEnabled) override;
+
+        /** Get if console input buffering is handled. */
+        virtual bool isInputBufferingEnabled() const noexcept override;
+
+        /** Set if characters are echoed when typed. */
+        virtual void setInputEchoing(bool isEnabled) override;
+
+        /** Get if characters are echoed when typed. */
+        virtual bool isInputEchoingEnabled() const noexcept override;
+
     private:
         /** Print a terminal control code to any valid unredirected output stream. */
         void printControlCode(const char* controlCode);
@@ -78,5 +90,7 @@ namespace Brainfreeze::CommandLineApp
         bool isOutputRedirected_ = false;
         bool isErrorRedirected_ = false;
         bool isTextFormattingEnabled_ = true;
+        bool isInputBuffered_ = false;
+        bool isInputEchoed_ = false;
     };
 }

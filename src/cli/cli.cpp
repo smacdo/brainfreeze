@@ -39,6 +39,7 @@ int unguardedMain(int argc, char** argv)
 
     bool convertInputCRLF = false;
     bool convertOutputLF = false;
+    bool inputBuffering = true;
     bool shouldEchoInput = GConsole->shouldEchoCharForInput();
 
     app.add_option("-f,--file,file", inputFilePath)
@@ -50,16 +51,19 @@ int unguardedMain(int argc, char** argv)
 #endif
         ->required();
 
-    app.add_option("--cells", cellCount)
+    app.add_option("-c,--cells", cellCount)
         ->description("Number of memory cells")
+        ->group("Brainfuck Details")
         ->type_name("<number>");
 
-    app.add_set("--blockSize", blockSize, { 1, 2, 4, 8 })
+    app.add_set("-s,--blockSize", blockSize, { 1, 2, 4, 8 })
         ->description("Size of each memory cell in bytes")
+        ->group("Brainfuck Details")
         ->type_name("<number>");
 
-    app.add_option("--eof", endOfStreamBehavior)
+    app.add_option("-e,--eof", endOfStreamBehavior)
         ->description("End of stream behavior")
+        ->group("Brainfuck Details")
         ->type_name("<behavior>")
         ->ignore_case()
         ->ignore_underscore()
@@ -67,11 +71,19 @@ int unguardedMain(int argc, char** argv)
 
     app.add_flag("--echoInput", shouldEchoInput)
         ->description("Write input to output for display")
+        ->group("Input/Output Behavior")
         ->default_val(shouldEchoInput)
+        ->ignore_case();
+
+    app.add_flag("--inputBuffering", inputBuffering)
+        ->description("Enable or disable input line buffering behavior")
+        ->group("Input/Output Behavior")
+        ->default_val(inputBuffering)
         ->ignore_case();
 
     app.add_flag("--convertInputCRLF", convertInputCRLF)
         ->description("Convert Windows style newlines (\\r\\n) to *nix (\\n) when reading input.")
+        ->group("Input/Output Behavior")
 #if _WIN32
         ->default_val(true)
 #else
@@ -81,6 +93,7 @@ int unguardedMain(int argc, char** argv)
 
     app.add_flag("--convertOutputLF", convertOutputLF)
         ->description("Convert *nix newlines (\\n) to Windows (\\r\\n) when writing output.")
+        ->group("Input/Output Behavior")
 #if _WIN32
         ->default_val(true)
 #else
@@ -94,7 +107,9 @@ int unguardedMain(int argc, char** argv)
     // Configure the console for Brainfreeze.
     GConsole->setShouldConvertInputCRtoLF(convertInputCRLF);
     GConsole->setShouldConvertOutputLFtoCRLF(convertOutputLF);
-    GConsole->setShouldEchoCharForInput(shouldEchoInput);
+    GConsole->setInputBuffering(inputBuffering);
+    GConsole->setInputEchoing(shouldEchoInput);
+    
     GConsole->setTitle(std::string("Brainfreeze: " + inputFilePath));
 
     try
