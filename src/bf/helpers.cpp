@@ -45,7 +45,7 @@ std::unique_ptr<Interpreter> Brainfreeze::Helpers::LoadFromDisk(const std::strin
     stream.exceptions(std::ifstream::failbit | std::ifstream::badbit);
 
     const auto size = std::filesystem::file_size(filename);
-    std::string buffer(size, '\0');
+    std::string buffer(static_cast<size_t>(size), '\0');
 
     // Read the whole file into the buffer.
     stream.read(buffer.data(), size);
