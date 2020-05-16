@@ -2,7 +2,6 @@
 #include "windows_console.h"
 #include "bf/bf.h"
 
-#include <loguru/loguru.hpp>
 #include <array>
 #include <stdexcept>
 #include <cassert>
@@ -160,14 +159,12 @@ WindowsConsole::~WindowsConsole()
 //---------------------------------------------------------------------------------------------------------------------
 void WindowsConsole::write(char d, OutputStreamName stream)
 {
-    LOG_F(1, "Writing char %d '%c'", (int)d, (char)d);
     auto handle = (stream == OutputStreamName::Stdout ? outputHandle_ : errorHandle_);
 
     std::array<char, 2> outBuffer = { d, '\0' };
     
     if (shouldConvertOutputLFtoCRLF() && d == '\n')
     {
-        LOG_F(1, "Replacing \\n with \\r\\n and then writing char");
         outBuffer[0] = '\r';
         outBuffer[1] = '\n';
 
@@ -202,14 +199,12 @@ char WindowsConsole::read()
     }
     
     // Acquire more characters from the input stream.
-    LOG_F(1, "BF read requested");
     readBuffered();
 
     // Exit early with a configurable end of stream value if there are no more characters left in the input stream.
     if (bufferedChars_.empty())
     {
         // TODO: Allow configurable return value.
-        LOG_F(2, "End of stream, returning %d", (int)0);
         return EOF;
     }
 
@@ -223,11 +218,6 @@ char WindowsConsole::read()
         if (!bufferedChars_.empty() && bufferedChars_.front() == '\n')
         {
             bufferedChars_.pop();
-            LOG_F(1, "Replacing CRLF \\r\\n with LF (\\n)");
-        }
-        else
-        {
-            LOG_F(1, "Replacing CR (\\r) with LF (\\n)");
         }
         
         c = '\n';
@@ -246,7 +236,6 @@ char WindowsConsole::read()
     }
 
     // TODO: Remove all these log statements.
-    LOG_F(2, "Returning char %d '%c'", (int)c, (char)c);
     return c;
 }
 
@@ -272,8 +261,6 @@ void WindowsConsole::readBuffered(bool waitForCharacter)
     // mode NOT to loop and wait for more characters.
     std::array<char, DefaultBufferSize> inputBuffer;
     DWORD numBytesRead = 0;
-
-    LOG_F(2, "Buffered input array is empty, trying to fill");
 
     do 
     {

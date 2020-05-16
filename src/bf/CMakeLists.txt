@@ -12,6 +12,6 @@ add_library(brainfreeze-interpreter STATIC
 	interpreter.cpp
 	public/bf/bf.h)
 target_include_directories(brainfreeze-interpreter PUBLIC public)
-target_link_libraries(brainfreeze-interpreter loguru)
+target_link_libraries(brainfreeze-interpreter)
 target_compile_features(brainfreeze-interpreter PUBLIC cxx_std_17)
 set_target_properties(brainfreeze-interpreter PROPERTIES CXX_EXTENSIONS OFF)

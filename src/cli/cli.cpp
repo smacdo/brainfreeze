@@ -7,7 +7,6 @@
 #include "platform/exception.h"
 
 #include <CLI11/CLI11.hpp>
-#include <loguru/loguru.hpp>
 
 using namespace Brainfreeze;
 using namespace Brainfreeze::CommandLineApp;
@@ -144,12 +143,6 @@ int unguardedMain(int argc, char** argv)
 //---------------------------------------------------------------------------------------------------------------------
 int main(int argc, char* argv[])
 {
-    // Initialize global logger.
-    loguru::g_stderr_verbosity = loguru::Verbosity_OFF;
-    loguru::init(argc, argv);
-
-    loguru::add_file("output.log", loguru::Truncate, loguru::Verbosity_2);    // TODO: Make this configurable.
-
     try
     {
         // Initialize console singleton.
