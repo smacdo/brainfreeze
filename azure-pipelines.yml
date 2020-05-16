@@ -1,0 +1,103 @@
+jobs:
+  - job: BuildTestAndPublish
+    displayName: "Build, test and publish C++ applications"
+    pool:
+      name: Default
+      demands:
+      - msbuild
+      - visualstudio
+      - vstest
+
+    variables:
+      DistProjectName: 'CppSandbox'
+      ArtifactProjectName: 'CppSandbox'
+      SolutionName: 'CppSandbox.sln'
+      CMakeProjectName: 'CppSandbox'
+
+    strategy:
+      maxParallel: 4
+      matrix:
+        debug_x86:
+          BuildConfiguration: 'Debug'
+          BuildPlatform: 'x86'
+          PlatformTarget: 'x86'
+          CMakeBuildType: 'Debug'
+        debug_x64:
+          BuildConfiguration: 'Debug'
+          BuildPlatform: 'x64'
+          PlatformTarget: 'x64'
+          CMakeBuildType: 'Debug'
+        release_x86:
+          BuildConfiguration: 'Release'
+          BuildPlatform: 'x86'
+          PlatformTarget: 'x86'
+          CMakeBuildType: 'RelWithDebInfo'
+        release_x64:
+          BuildConfiguration: 'Release'
+          BuildPlatform: 'x64'
+          PlatformTarget: 'x64'
+          CMakeBuildType: 'RelWithDebInfo'
+
+    steps:
+    - task: BatchScript@1
+      displayName: 'Configure Visual Studio build tools environment'
+      inputs:
+        filename: 'C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\VC\Auxiliary\Build\vcvarsall.bat'
+        arguments: '$(PlatformTarget)'
+        failOnStandardError: true
+        modifyEnvironment: true
+    - task: CMake@1
+      displayName: 'Configure CMake'
+      inputs:
+        workingDirectory: 'build\$(PlatformTarget)-$(BuildConfiguration)'
+        cmakeArgs: '../../ -G "Ninja" -DCMAKE_BUILD_TYPE=$(CmakeBuildType)'
+    - task: CMake@1
+      displayName: 'Build using CMake'
+      inputs:
+        workingDirectory: 'build\$(PlatformTarget)-$(BuildConfiguration)'
+        cmakeArgs: '--build .'
+    - task: CmdLine@2
+      displayName: 'Run unit tests'
+      inputs:
+        script: |
+          pushd tests\unit\bf
+          .\tests.exe -r junit -o testresults.xml
+          popd
+        workingDirectory: 'build\$(PlatformTarget)-$(BuildConfiguration)'
+        failOnStderr: true
+    - task: PublishTestResults@2
+      inputs:
+        testResultsFormat: 'JUnit'
+        testResultsFiles: 'build\$(PlatformTarget)-$(BuildConfiguration)/tests/**/*.xml'
+        failTaskOnFailedTests: true
+        testRunTitle: 'Unit tests ($(PlatformTarget) ($BuildConfiguration))' 
+        platform: '$(PlatformTarget)'
+        configuration: '$(BuildConfiguration)'
+    - task: CmdLine@2
+      displayName: 'Run CPack'
+      inputs:
+        script: |
+          "C:\Program Files\CMake\bin\cpack.exe" ../../
+        workingDirectory: 'build\$(PlatformTarget)-$(BuildConfiguration)'
+        failOnStderr: true
+    - task: CopyFiles@2
+      displayName: 'Copy CPack installers to build staging'
+      inputs:
+        SourceFolder: 'build\$(PlatformTarget)-$(BuildConfiguration)'
+        Contents: |
+          $(CMakeProjectName)-*.exe
+          $(CMakeProjectName)-*.zip
+        TargetFolder: '$(build.artifactstagingdirectory)'
+    - task: PublishSymbols@2
+      displayName: 'Publish symbols'
+      inputs:
+        SearchPattern: 'build\$(PlatformTarget)-$(BuildConfiguration)\src\**\*.pdb'
+        SymbolServerType: TeamServices
+        SymbolsArtifactName: 'Symbols_$(PlatformTarget)_$(BuildConfiguration)'
+      continueOnError: true
+    - task: PublishBuildArtifacts@1
+      displayName: 'Publish build artifact'
+      inputs:
+        PathtoPublish: '$(build.artifactstagingdirectory)'
+        ArtifactName: '$(ArtifactProjectName)-$(BuildConfiguration)-$(PlatformTarget)'
+
