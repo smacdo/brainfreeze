@@ -14,17 +14,13 @@ namespace Brainfreeze::CommandLineApp
         virtual ~WindowsConsole();
 
         /** Write a byte to the Windows console. */
-        virtual void write(char d) override;
+        virtual void write(char d, OutputStreamName stream) override;
 
         /** Write a string to standard output. */
-        virtual void write(
-            std::string_view message,
-            OutputStreamName stream = OutputStreamName::Stdout) override;
+        virtual void write(std::string_view message, OutputStreamName stream) override;
 
         /** Write a string to standard output and move to the next line. */
-        virtual void writeLine(
-            std::string_view message,
-            OutputStreamName stream = OutputStreamName::Stdout) override;
+        virtual void writeLine(std::string_view message, OutputStreamName stream) override;
 
         /** Read a byte from the Windows console. */
         virtual char read() override;
@@ -39,20 +35,13 @@ namespace Brainfreeze::CommandLineApp
         virtual bool isErrorRedirected() const override;
 
         /** Set the text color for future text printed to the console. */
-        virtual void setTextColor(
-            AnsiColor foreground,
-            AnsiColor background,
-            OutputStreamName stream = OutputStreamName::Stdout) override;
+        virtual void setTextColor(AnsiColor foreground, AnsiColor background) override;
 
         /** Set the foreground color for future text printed to the console. */
-        virtual void setTextForegroundColor(
-            AnsiColor color,
-            OutputStreamName stream = OutputStreamName::Stdout) override;
+        virtual void setTextForegroundColor(AnsiColor color) override;
 
         /** Set the background color for future text printed to the console. */
-        virtual void setTextBackgroundColor(
-            AnsiColor color,
-            OutputStreamName stream = OutputStreamName::Stdout) override;
+        virtual void setTextBackgroundColor(AnsiColor color) override;
             
         /** Set or remove text formatting flag for future text printed to the console. */
         virtual void setTextFormat(AnsiFormatOption option, bool shouldEnable = true) override;
@@ -72,9 +61,22 @@ namespace Brainfreeze::CommandLineApp
         /** Set window title. */
         virtual void setTitle(std::string_view title) override;
 
+        /** Set if console should handle raw unbuffered console input. */
+        virtual void setInputBuffering(bool isEnabled) override;
+
+        /** Get if console input buffering is handled. */
+        virtual bool isInputBufferingEnabled() const noexcept override;
+
+        /** Set if characters are echoed when typed. */
+        virtual void setInputEchoing(bool isEnabled) override;
+
+        /** Get if characters are echoed when typed. */
+        virtual bool isInputEchoingEnabled() const noexcept override;
+
     private:
-        void ReadBuffered(bool waitForCharacter = false);
-        void ClearInputBuffer();
+        void readBuffered(bool waitForCharacter = false);
+        void clearInputBuffer();
+        void raiseError(DWORD error, const char* action, const char* filename, int lineNumber);
 
     private:
         static const size_t DefaultBufferSize = 256;
@@ -88,11 +90,23 @@ namespace Brainfreeze::CommandLineApp
         /// Standard output handle. Could be the console output buffer or a redirected output stream.
         HANDLE outputHandle_ = INVALID_HANDLE_VALUE;
 
+        /// Standard error handle. Could be the console output buffer or a redirected output stream.
+        HANDLE errorHandle_ = INVALID_HANDLE_VALUE;
+
         /// Get if input handle is reading from console input buffer (true) or a redirected input stream (false).
         bool bIsConsoleInput_ = true;
 
         /// Get if output handle is writing to console output buffer (true) or a redirected output stream (false).
         bool bIsConsoleOutput_ = true;
+
+        /// Get if error handle is writing to console ouput buffer (true) or redirected output stream (false).
+        bool bIsConsoleError_ = true;
+
+        /// Get if input is line buffered (true) or unbuffered (false).
+        bool bIsInputBuffered_ = true;
+
+        /// Get if input is echoed (true) or not echoed (false).
+        bool bIsInputEchoed_ = true;
 
         /// Saved console input mode from prior to instantiating the console.
         DWORD prevConsoleInputMode_ = 0;

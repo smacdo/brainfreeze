@@ -362,6 +362,7 @@ void UnixConsole::setInputBuffering(bool isEnabled)
     }
 
     // Set/unset cannonical mode to set/unset input buffering.
+    // TODO: Isn't this backwards?
     if (isEnabled)
     {
         terminalParams.c_lflag &= ~ICANON;
@@ -411,6 +412,7 @@ void UnixConsole::setInputEchoing(bool isEnabled)
     }
 
     // Set/unset cannonical mode to set/unset input buffering.
+    // TODO: Isn't this backwards?
     if (isEnabled)
     {
         terminalParams.c_lflag &= ~ECHO;

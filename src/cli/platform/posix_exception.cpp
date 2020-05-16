@@ -25,8 +25,12 @@ std::string POSIXException::getMessageForError(int errorCode)
     std::string buffer(kMaxLength, ' ');
     buffer[kMaxLength - 1] = '\0';
 
+#ifdef WIN32
+    auto result = strerror_s(buffer.data(), kMaxLength, errorCode);
+#else
     auto result = strerror_r(errorCode, buffer.data(), kMaxLength);
-    
+#endif
+
     // Trim the extraneous null terminators from the string so long as the call to strerror_r succeeded.
     auto endIndex = buffer.find_first_of('\0');
 

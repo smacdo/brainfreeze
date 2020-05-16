@@ -6,6 +6,7 @@
 #include <array>
 #include <stdexcept>
 #include <cassert>
+#include <sstream>
 
 #include <Windows.h>
 #include <iostream> // TODO: REMOVE
@@ -87,32 +88,39 @@ namespace
 WindowsConsole::WindowsConsole()
     : bufferedChars_(),
       inputHandle_(GetStdHandle(STD_INPUT_HANDLE)),
-      outputHandle_(GetStdHandle(STD_OUTPUT_HANDLE))
+      outputHandle_(GetStdHandle(STD_OUTPUT_HANDLE)),
+      errorHandle_(GetStdHandle(STD_ERROR_HANDLE))
 {
     // Check that input and output handles are valid.
     if (inputHandle_ == INVALID_HANDLE_VALUE)
     {
-        throw std::runtime_error("Failed to get standard input handle for console i/o");
+        raiseError(0, "Failed to get standard input handle", __FILE__, __LINE__);
     }
 
     if (outputHandle_ == INVALID_HANDLE_VALUE)
     {
-        throw std::runtime_error("Failed to get standard output handle for console i/o");
+        raiseError(0, "Failed to get standard output handle", __FILE__, __LINE__);
+    }
+
+    if (errorHandle_ == INVALID_HANDLE_VALUE)
+    {
+        raiseError(0, "Failed to get standard error handle", __FILE__, __LINE__);
     }
 
     // Save the current console mode (and restore when finished) but only if input / output is a terminal. Otherwise
     // either input or output is redirected and should not be treated as a console terminal.
     bIsConsoleInput_ = (GetFileType(inputHandle_) == FILE_TYPE_CHAR);
     bIsConsoleOutput_ = (GetFileType(outputHandle_) == FILE_TYPE_CHAR);
+    bIsConsoleError_ = (GetFileType(errorHandle_) == FILE_TYPE_CHAR);
 
     if (bIsConsoleInput_ && !GetConsoleMode(inputHandle_, &prevConsoleInputMode_))
     {
-        throw std::runtime_error("Failed to save console input mode");
+        raiseError(GetLastError(), "Failed to save console input mode", __FILE__, __LINE__);
     }
 
     if (bIsConsoleOutput_ && !GetConsoleMode(outputHandle_, &prevConsoleOutputMode_))
     {
-        throw std::runtime_error("Failed to save console output mode");
+        raiseError(GetLastError(), "Failed to save console output mode", __FILE__, __LINE__);
     }
 
     // Save the current console output character attributes if output is not redirected.
@@ -122,7 +130,7 @@ WindowsConsole::WindowsConsole()
 
         if (!GetConsoleScreenBufferInfo(outputHandle_, &screenInfo))
         {
-            throw std::runtime_error("Failed to save output character attributes");
+            raiseError(GetLastError(), "Failed to save console character attributes", __FILE__, __LINE__);
         }
 
         prevConsoleOutputCharAttributes_ = screenInfo.wAttributes;
@@ -130,24 +138,6 @@ WindowsConsole::WindowsConsole()
         // Set current text foreground and background colors.
         currentTextForegroundColor_ = ExtractForegroundColor(prevConsoleOutputCharAttributes_);
         currentTextBackgroundColor_ = ExtractBackgroundColor(prevConsoleOutputCharAttributes_);
-    }
-
-    // Disable line input mode when we are attached to console input. This flag tells ReadFile to block until a
-    // carriage return is read which prevents us from getting single character values.
-    if (bIsConsoleInput_)
-    {
-        DWORD newInputMode = prevConsoleInputMode_ & ~ENABLE_LINE_INPUT & ~ENABLE_ECHO_INPUT;
-
-        if (!SetConsoleMode(inputHandle_, newInputMode))
-        {
-            // TODO: Throw all exceptions with an error message like this.
-            std::string message = "Failed to disable ENABLE_LINE_INPUT for console input";
-            message += std::to_string(GetLastError());
-
-            throw std::runtime_error(message);
-        }
-
-        LOG_F(1, "Disabled console input buffered line read mode");
     }
 }
 
@@ -168,9 +158,10 @@ WindowsConsole::~WindowsConsole()
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-void WindowsConsole::write(char d)
+void WindowsConsole::write(char d, OutputStreamName stream)
 {
     LOG_F(1, "Writing char %d '%c'", (int)d, (char)d);
+    auto handle = (stream == OutputStreamName::Stdout ? outputHandle_ : errorHandle_);
 
     std::array<char, 2> outBuffer = { d, '\0' };
     
@@ -180,23 +171,23 @@ void WindowsConsole::write(char d)
         outBuffer[0] = '\r';
         outBuffer[1] = '\n';
 
-        WriteFile(outputHandle_, outBuffer.data(), 2, nullptr, nullptr);
+        WriteFile(handle, outBuffer.data(), 2, nullptr, nullptr);
     }
     else
     {
-        WriteFile(outputHandle_, outBuffer.data(), 1, nullptr, nullptr);
+        WriteFile(handle, outBuffer.data(), 1, nullptr, nullptr);
     }
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-void WindowsConsole::write(std::string_view message, OutputStreamName stream)
+void WindowsConsole::write(std::string_view, OutputStreamName)
 {
     // TODO: support LF -> CRLF option for newlines found in message.
     throw std::runtime_error("TODO: Implement me");
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-void WindowsConsole::writeLine(std::string_view message, OutputStreamName stream)
+void WindowsConsole::writeLine(std::string_view, OutputStreamName)
 {
     throw std::runtime_error("TODO: Implement me");
 }
@@ -212,7 +203,7 @@ char WindowsConsole::read()
     
     // Acquire more characters from the input stream.
     LOG_F(1, "BF read requested");
-    ReadBuffered();
+    readBuffered();
 
     // Exit early with a configurable end of stream value if there are no more characters left in the input stream.
     if (bufferedChars_.empty())
@@ -245,7 +236,7 @@ char WindowsConsole::read()
     // Echo character if requested.
     if (shouldEchoCharForInput())
     {
-        write(c);
+        write(c, OutputStreamName::Stdout);
     }
 
     // Restore old title.
@@ -260,7 +251,7 @@ char WindowsConsole::read()
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-void WindowsConsole::ReadBuffered(bool waitForCharacter)
+void WindowsConsole::readBuffered(bool waitForCharacter)
 {
     // If there are unread characters in the input buffer exit early to avoid extra work to read more characters. It is
     // more efficient to batch work by waiting until the input buffer is drained and then reading as many characters
@@ -302,7 +293,7 @@ void WindowsConsole::ReadBuffered(bool waitForCharacter)
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-void WindowsConsole::ClearInputBuffer()
+void WindowsConsole::clearInputBuffer()
 {
     while (!bufferedChars_.empty())
     {
@@ -329,7 +320,7 @@ bool WindowsConsole::isErrorRedirected() const
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-void WindowsConsole::setTextColor(AnsiColor foreground, AnsiColor background, OutputStreamName stream)
+void WindowsConsole::setTextColor(AnsiColor foreground, AnsiColor background)
 {
     if (!isOutputRedirected())
     {
@@ -344,19 +335,19 @@ void WindowsConsole::setTextColor(AnsiColor foreground, AnsiColor background, Ou
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-void WindowsConsole::setTextForegroundColor(AnsiColor color, OutputStreamName stream)
+void WindowsConsole::setTextForegroundColor(AnsiColor color)
 {
     setTextColor(color, currentTextBackgroundColor_);
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-void WindowsConsole::setTextBackgroundColor(AnsiColor color, OutputStreamName stream)
+void WindowsConsole::setTextBackgroundColor(AnsiColor color)
 {
     setTextColor(currentTextForegroundColor_, color);
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-void WindowsConsole::setTextFormat(AnsiFormatOption option, bool shouldEnable)
+void WindowsConsole::setTextFormat(AnsiFormatOption, bool)
 {
     throw std::runtime_error("TODO: Implement me");
 }
@@ -391,4 +382,128 @@ void WindowsConsole::setTitle(std::string_view title)
 {
     SetConsoleTitleA(title.data());
     windowTitle_ = title;
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+void WindowsConsole::setInputBuffering(bool isEnabled)
+{
+    // Do not apply any terminal changes if input was redirected.
+    if (isInputRedirected())
+    {
+        return;
+    }
+
+    // Get the current input mode to change it.
+    DWORD inputMode = 0;
+
+    if (!GetConsoleMode(inputHandle_, &inputMode))
+    {
+        raiseError(GetLastError(), "Failed to get console input mode", __FILE__, __LINE__);
+        return;
+    }
+
+    // Add or remove the ENABLE_LINE_INPUT flag from the input mode.
+    if (isEnabled)
+    {
+        inputMode |= ENABLE_LINE_INPUT;
+    }
+    else
+    {
+        inputMode &= ~ENABLE_LINE_INPUT;
+    }
+
+    // Now apply the input mode.
+    if (!SetConsoleMode(inputHandle_, inputMode))
+    {
+        raiseError(GetLastError(), "Failed to set console input mode", __FILE__, __LINE__);
+        return;
+    }
+
+    bIsInputBuffered_ = isEnabled;
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+bool WindowsConsole::isInputBufferingEnabled() const noexcept
+{
+    return bIsInputBuffered_;
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+void WindowsConsole::setInputEchoing(bool isEnabled)
+{
+    IConsole::setShouldEchoCharForInput(isEnabled);
+
+    // Do not apply any terminal changes if input was redirected.
+    if (isInputRedirected())
+    {
+        return;
+    }
+
+    // Get the current input mode to change it.
+    DWORD inputMode = 0;
+
+    if (!GetConsoleMode(inputHandle_, &inputMode))
+    {
+        raiseError(GetLastError(), "Failed to get console input mode", __FILE__, __LINE__);
+        return;
+    }
+
+    // Add or remove the ENABLE_LINE_INPUT flag from the input mode.
+    if (isEnabled)
+    {
+        inputMode |= ENABLE_ECHO_INPUT;
+    }
+    else
+    {
+        inputMode &= ~ENABLE_ECHO_INPUT;
+    }
+
+    // Now apply the input mode.
+    if (!SetConsoleMode(inputHandle_, inputMode))
+    {
+        raiseError(GetLastError(), "Failed to set console input mode", __FILE__, __LINE__);
+        return;
+    }
+
+    bIsInputEchoed_ = isEnabled;
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+bool WindowsConsole::isInputEchoingEnabled() const noexcept
+{
+    return bIsInputEchoed_;
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+void WindowsConsole::raiseError(DWORD error, const char* action, const char* filename, int lineNumber)
+{
+    if (error == 0)
+    {
+        // TODO: HANDLE
+    }
+
+    // Get the error message as a string.
+    // Ref: https://stackoverflow.com/a/17387176/1922926
+    LPSTR messageBuffer = nullptr;
+
+    auto size = FormatMessageA(
+        FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+        0,                                              // Location of message definition.
+        error,                                          // Message id.
+        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),      // language id.
+        (LPSTR)&messageBuffer,                          // Pointer to buffer that receives the message.
+        0,                                              // FormatMessageA should allocate the buffer.
+        nullptr);                                       // No formatting arguments.
+
+    std::string errorMessage(messageBuffer, size);
+    LocalFree(messageBuffer);
+
+    // Create a formatted error message.
+    std::stringstream ss;
+    ss << "[CONSOLE] " << action << ": " << errorMessage << " in " << filename << ":" << lineNumber << std::endl;
+    
+    // Print the formatted message to the console.
+    // TODO: Print as bold red text.
+    auto formattedMessage = ss.str();
+    WriteFile(errorHandle_, formattedMessage.data(), (DWORD)formattedMessage.length(), nullptr, nullptr);
 }

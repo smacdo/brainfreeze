@@ -33,11 +33,11 @@ std::unique_ptr<Interpreter> Brainfreeze::Helpers::LoadFromDisk(const std::strin
     // Check that the path exists and is a file.
     if (!std::filesystem::exists(filename))
     {
-        throw CompileException("Path to source code file does not exist", -1, 0, 0);
+        throw CompileException("Path to source code file does not exist", (size_t)-1, 0, 0);
     }
     else if (!std::filesystem::is_regular_file(filename))
     {
-        throw CompileException("Path to soure code file is not a file", -1, 0, 0);
+        throw CompileException("Path to soure code file is not a file", (size_t)-1, 0, 0);
     }
 
     // Reserve enough space to hold the file and then read it into memory all at once.
