@@ -4,6 +4,10 @@ project(BrainFreeze
   DESCRIPTION "A cross platform Brainfuck interpreter with configurable implementation standards"
   HOMEPAGE_URL "https://github.com/smacdo/brainfreeze")
 
+##### IMPORTANT VALUES TO UPDATE ON VERSION BUMPS #####
+# Make sure this is set to a static value for release builds:
+#SET(CPACK_WIX_UPGRADE_GUID "")
+
 # Third party dependencies.
 add_subdirectory(thirdparty)
 
@@ -14,12 +18,16 @@ else()
   add_compile_options(-Wall -Wextra -pedantic -Werror)
 endif()
 
+# Source code and unit tests.
 add_subdirectory(src)
 add_subdirectory(tests)
 
+# Main program installation.
+include(InstallRequiredSystemLibraries)
+
 # CPack configuration
 if (WIN32)
-  set(CPACK_GENERATOR "ZIP;NSIS")
+  set(CPACK_GENERATOR "ZIP;WIX")
 elseif(APPLE)
   set(CPACK_GENERATOR "ZIP;DragNDrop")
 else()
@@ -33,6 +41,8 @@ set(CPACK_PACKAGE_VERSION_MINOR ${PROJECT_VERSION_MINOR})
 set(CPACK_PACKAGE_VERSION_PATCH ${PROJECT_VERSION_PATCH})
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt")
 set(CPACK_RESOURCE_FILE_README "${CMAKE_CURRENT_SOURCE_DIR}/README.md")
+set(CPACK_PACKAGE_INSTALL_DIRECTORY ${CMAKE_PROJECT_NAME})
+set(CPACK_WIX_PATCH_FILE "${CMAKE_CURRENT_SOURCE_DIR}/wixpatch.xml")
 
 set(CPACK_SOURCE_GENERATOR "TGZ;ZIP")
 set(CPACK_SOURCE_IGNORE_FILES
@@ -41,5 +51,7 @@ set(CPACK_SOURCE_IGNORE_FILES
     /.*build.*
     /\\\\.DS_Store
 )
+
+set(CPACK_WIX_PRODUCT_GUID "9EF095B9-AE36-4497-8A39-CAA62684906F")
 
 include(CPack)
