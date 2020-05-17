@@ -77,7 +77,7 @@ jobs:
         script: |
           "C:\Program Files\CMake\bin\cpack.exe" ../../
         workingDirectory: 'build\$(PlatformTarget)-$(BuildConfiguration)'
-        failOnStderr: true
+        failOnStderr: false
     - task: CopyFiles@2
       displayName: 'Copy CPack installers to build staging'
       inputs:
