@@ -13,9 +13,19 @@ add_subdirectory(thirdparty)
 
 # Set warnings as errors, and set the warning level high.
 if(MSVC)
-  add_compile_options(/W4 /WX)
+	add_compile_options(/W4 /WX)
+
+	if (NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+		# Disable "unreferenced formal parameter" warnings in release mode (some referenced only by debug checks).
+		add_compile_options(/wd4100)
+	endif()  
 else()
-  add_compile_options(-Wall -Wextra -pedantic -Werror)
+	add_compile_options(-Wall -Wextra -pedantic -Werror)
+
+	if (NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+		# Disable "unreferenced formal parameter" warnings in release mode (some referenced only by debug checks).
+		add_compile_options(-Wno-unused)
+	endif()  
 endif()
 
 # Source code and unit tests.
