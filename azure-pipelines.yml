@@ -9,10 +9,8 @@ jobs:
       - vstest
 
     variables:
-      DistProjectName: 'CppSandbox'
-      ArtifactProjectName: 'CppSandbox'
-      SolutionName: 'CppSandbox.sln'
-      CMakeProjectName: 'CppSandbox'
+      ArtifactProjectName: 'Brainfreeze'
+      CMakeProjectName: 'Brainfreeze'
 
     strategy:
       maxParallel: 4
@@ -86,6 +84,7 @@ jobs:
         SourceFolder: 'build\$(PlatformTarget)-$(BuildConfiguration)'
         Contents: |
           $(CMakeProjectName)-*.exe
+          $(CMakeProjectName)-*.msi
           $(CMakeProjectName)-*.zip
         TargetFolder: '$(build.artifactstagingdirectory)'
     - task: PublishSymbols@2
