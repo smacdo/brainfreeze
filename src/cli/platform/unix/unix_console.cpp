@@ -10,10 +10,6 @@
 #include <stdio.h>
 #include <errno.h>
 
-#ifdef DEBUG_TRACE_LOGGING
-#include <loguru/loguru.hpp>
-#endif
-
 using namespace Brainfreeze;
 using namespace Brainfreeze::CommandLineApp;
 
@@ -97,18 +93,8 @@ UnixConsole::UnixConsole()
     isOutputRedirected_ = !isatty(STDOUT_FILENO);
     isErrorRedirected_ = !isatty(STDERR_FILENO);
 
-    if (isInputRedirected())
+    if (!isInputRedirected())
     {
-#ifdef DEBUG_TRACE_LOGGING
-        LOG_F(INFO, "Standard input is redirected, disabling echo");
-#endif
-    }
-    else
-    {
-#ifdef DEBUG_TRACE_LOGGING
-        LOG_F(INFO, "Raw console input detected");
-#endif
-
         // Save old terminal parameters so they can be restored when this console instance is destroyed.
         if (tcgetattr(0, &oldTerminalParams_) != 0)
         {
@@ -149,18 +135,10 @@ void UnixConsole::write(char d, OutputStreamName stream)
 
     if (d == '\n' && shouldConvertOutputLFtoCRLF())
     {
-#ifdef DEBUG_TRACE_LOGGING
-        LOG_F(INFO, "Write LF with conversion to CRLF (two chars)");
-#endif
-
         status = fprintf(handle, "\r\n");
     }
     else
     {
-#ifdef DEBUG_TRACE_LOGGING
-        LOG_F(INFO, "Write char #%d %c", (int)d, d);
-#endif
-
         status = fprintf(handle, "%c", d);
     }
 
@@ -194,16 +172,9 @@ char UnixConsole::read()
         raiseError(errno, "Reading a character", __FILE__, __LINE__);
     }
 
-#ifdef DEBUG_TRACE_LOGGING
-        LOG_F(INFO, "Read char #%d %c", (int)c, c);
-#endif
-
     // Echo the character if requested.
     if (shouldEchoCharForInput())
     {
-#ifdef DEBUG_TRACE_LOGGING
-        LOG_F(INFO, "Will echo");
-#endif
         write(c);
     }
 
