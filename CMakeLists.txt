@@ -4,6 +4,26 @@ project(BrainFreeze
   DESCRIPTION "A cross platform Brainfuck interpreter with configurable implementation standards"
   HOMEPAGE_URL "https://github.com/smacdo/brainfreeze")
 
+set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
+
+# Global options.
+include(ClangTidy)
+
+if (HAS_CLANG_TIDY)
+	option(USE_CLANG_TIDY "Run clang tidy on supported targets" OFF)
+endif()
+
+option(USE_ASAN "Build targets with address sanitizer (2x slowdown)" OFF)
+option(USE_UBSAN "Build targets with undefined sanitizer" OFF)
+
+if(USE_ASAN)
+	set(CPP_SANITIZER "asan")
+elseif(USE_UBSAN)
+	set(CPP_SANITIZER "ubsan")
+else()
+	set(CPP_SANITIZER "none")
+endif()
+
 ##### IMPORTANT VALUES TO UPDATE ON VERSION BUMPS #####
 # Make sure this is set to a static value for release builds:
 #SET(CPACK_WIX_UPGRADE_GUID "")
@@ -18,14 +38,14 @@ if(MSVC)
 	if (NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
 		# Disable "unreferenced formal parameter" warnings in release mode (some referenced only by debug checks).
 		add_compile_options(/wd4100)
-	endif()  
+	endif()
 else()
 	add_compile_options(-Wall -Wextra -pedantic -Werror)
 
 	if (NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
 		# Disable "unreferenced formal parameter" warnings in release mode (some referenced only by debug checks).
 		add_compile_options(-Wno-unused)
-	endif()  
+	endif()
 endif()
 
 # Source code and unit tests.

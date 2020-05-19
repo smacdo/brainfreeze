@@ -17,8 +17,18 @@ add_executable(
 	platform/posix_exception.cpp
 	${PLATFORM_CONSOLE_CPP})
 
-target_link_libraries(brainfreeze brainfreeze-interpreter CLI11)
+target_link_libraries(brainfreeze PRIVATE brainfreeze-interpreter CLI11)
 target_compile_features(brainfreeze PUBLIC cxx_std_17)
 set_target_properties(brainfreeze PROPERTIES CXX_EXTENSIONS OFF)
+
+# Sanitizer support
+include(CppSanitizers)
+target_use_cpp_sanitizer(brainfreeze ${CPP_SANITIZER})
+
+# Clang tidy support.
+if(USE_CLANG_TIDY)
+	message("enabling clang tidy via ${CLANG_TIDY_PROPERTIES}")
+    set_target_properties(brainfreeze PROPERTIES CXX_CLANG_TIDY "${CLANG_TIDY_PROPERTIES}")
+endif() 
 
 install(TARGETS brainfreeze BUNDLE)

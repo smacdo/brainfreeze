@@ -16,11 +16,10 @@ set(TEST_FILES
 )
 
 add_executable(tests ${SOURCES} ${TEST_FILES})
-target_link_libraries(tests PRIVATE brainfreeze-interpreter Catch2::Catch2)
+target_link_libraries(tests PRIVATE brainfreeze-interpreter Catch2::Catch2 -fsanitize=address)
 target_compile_features(tests PUBLIC cxx_std_17)
 set_target_properties(tests PROPERTIES CXX_EXTENSIONS OFF)
 
-#add_custom_target(tests ALL test-brainfreeze
-#                  DEPENDS test-brainfreeze
-#                  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-#                  COMMENT Runs application unit tests)
+# Sanitizer support
+include(CppSanitizers)
+target_use_cpp_sanitizer(tests ${CPP_SANITIZER})
