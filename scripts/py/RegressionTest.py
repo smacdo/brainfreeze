@@ -1,19 +1,24 @@
 """
 A simple framework for running regression tests on console applications and reporting their results.
 """
-import os, sys, glob, struct
+import os, sys, glob, struct, time, socket, datetime
 import difflib
 from subprocess import Popen, PIPE
+from xml.dom.minidom import getDOMImplementation
 
 class TestOutput:
     """Holds the output (expected or actual) from a test scenario."""
     stdout = None
+    stdoutText = None
     stderr = None
+    stdErrText = None
     exitCode = None
 
     def __init__(self, stdout, stderr, exitCode):
         self.stdout = stdout
+        self.stdoutText = stdout.decode('utf-8')
         self.stderr = stderr
+        self.stderrText = stderr.decode('utf-8')
         self.exitCode = exitCode
 
     def hasExitCode(self):
@@ -356,3 +361,136 @@ class ConsoleOutputHandler(OutputHandler):
         print(f'Ran {self.testCounter} tests.', end='')
         print(f'{self.okCounter} ok, {self.failCounter} failed, {self.totalTests} total', end='')
         print(self.resetColorStr)
+
+class JunitOutputHandler(OutputHandler):
+    """Writes test runner output to disk with JUnit format"""
+    totalTestCount = 0
+    testCounter = 0
+    failCounter = 0         # Number of test cases that fail because a test assertion failed.
+    errorCounter = 0        # Number of test cases that fail because an unexpected exception or similiar.
+    disabledCounter = 0     # Number of test cases that are disabled (marked with disable tag).
+    ignoredCounter = 0      # Number of test cases that were ignored (marked with ignore tag).
+    okCounter = 0           # Number of test cases that succeeded.
+    startTime = 0           # Time when test runner started.
+    endTime = 0             # Time when test runner finished.
+    testStartTime = 0
+    allTestCases = []
+    parentTestSuitesName = "AllRegressionTests"
+    defaultTestSuiteName = "RegressionTests"
+    destinationPath = None
+
+    def __init__(self, destinationPath):
+        self.destinationPath = destinationPath
+        self.xmldoc = getDOMImplementation().createDocument(None, "testsuites", None)
+        self.testSuites = self.xmldoc.documentElement
+        self.testSuite = self.xmldoc.createElement('testsuite')
+        self.testSuites.appendChild(self.testSuite)
+
+    def onRunStart(self, totalTests):
+        """Called when test runner about to run tests"""
+        self.startTime = time.time()
+        self.totalTestCount = totalTests
+
+    def onTestStart(self, scenario):
+        """Called when a test scenario is about to be executed"""
+        self.testStartTime = time.time()
+    
+    def onTestOk(self, scenario, result):
+        """Prints test runner output to the console"""
+        testDuration = time.time() - self.testStartTime
+        self.allTestCases.append([scenario, result, "ok", testDuration])
+        self.okCounter += 1
+
+    def onTestFail(self, scenario, result):
+        """Called when test scenario fails"""
+        testDuration = time.time() - self.testStartTime
+        self.allTestCases.append([scenario, result, "fail", testDuration])
+        self.failCounter += 1
+
+    def onFinish(self):
+        self.endTime = time.time()
+        runDuration = self.endTime - self.startTime
+
+        # Set attributes on root <testsuites /> which copy their counts from the inner <testsuite /> because there is
+        # only one test suite at this point.
+        self.testSuites.setAttribute('tests', str(self.totalTestCount))
+        self.testSuites.setAttribute('disabled', str(self.disabledCounter))
+        self.testSuites.setAttribute('errors', str(self.errorCounter))
+        self.testSuites.setAttribute('failures', str(self.failCounter))
+        self.testSuites.setAttribute('name', self.parentTestSuitesName)
+        self.testSuites.setAttribute('time', str(runDuration))
+
+        # Write out the root test suite.
+        self.testSuite.setAttribute('name', self.defaultTestSuiteName)
+        self.testSuite.setAttribute('tests', str(self.totalTestCount))
+        self.testSuite.setAttribute('errors', str(self.errorCounter))
+        self.testSuite.setAttribute('failures', str(self.failCounter))
+        self.testSuite.setAttribute('hostname', socket.gethostname())
+        self.testSuite.setAttribute('id', str(0))       # Increment for each test suite entry.
+        self.testSuite.setAttribute('skipped', str(self.disabledCounter + self.ignoredCounter))
+        self.testSuite.setAttribute('time', str(runDuration))
+        self.testSuite.setAttribute('timestamp', datetime.datetime.now().isoformat())
+
+        # Write out each test case that was executed.
+        for testCase in self.allTestCases:
+            element = self.xmldoc.createElement('testcase')
+            self.testSuite.appendChild(element)
+
+            scenario = testCase[0]
+            result = testCase[1]
+            status = testCase[2]
+            duration = testCase[3]
+
+            element.setAttribute('name', scenario.scriptName)
+            element.setAttribute('classname', 'RegressionScenarios')
+            element.setAttribute('duration', str(duration))
+            element.setAttribute('status', status)
+
+            # Write standard out and standard error.
+            stdoutElement = self.xmldoc.createElement('system-out')
+            stdoutText = self.xmldoc.createTextNode(result.actual.stdoutText)
+            
+            element.appendChild(stdoutElement)
+            stdoutElement.appendChild(stdoutText)
+            
+            stderrElement = self.xmldoc.createElement('system-err')
+            stderrText = self.xmldoc.createTextNode(result.actual.stderrText)
+            
+            element.appendChild(stderrElement)
+            stderrElement.appendChild(stderrText)
+
+            # Write failure messages.
+            if status == "ok":
+                pass
+            elif status == "fail":
+                for message in result.messages:
+                    errorElement = self.xmldoc.createElement('failure')
+                    element.appendChild(errorElement)
+
+                    errorElement.setAttribute('message', message.text)
+
+                    # Recreate the output as text to shove into the details section.
+                    details = ""
+
+                    if message.expected is not None:
+                        details += 'EXPECTED:\n'
+                        details += message.expected
+
+                    if message.actual is not None:
+                        details += 'ACTUAL:\n'
+                        details += message.actual
+
+                    if message.diff is not None:
+                        details += 'DIFF:\n'
+                        details += message.diff
+                    
+                    if details != "":
+                        detailsText = self.xmldoc.createTextNode(details)
+                        errorElement.appendChild(detailsText)
+
+            elif status == "ignored":
+                # TODO: Support this.
+                pass
+
+        #print(self.xmldoc.toprettyxml())
+        open(self.destinationPath, 'w').write(self.xmldoc.toprettyxml())

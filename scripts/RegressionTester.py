@@ -29,6 +29,7 @@ parser.add_argument('-v', '--verbose', default=False, action='store_true', help=
 parser.add_argument('-o', '--outdir', default=None, help='Directory that will receive failed test run results')
 parser.add_argument('--ignoreFailures', default=False, action='store_true', help='If test runner should continue even if a test fails')
 parser.add_argument('--color', default=True, help='Use text color formatting')
+parser.add_argument('-j', '--junit', default=None, help='Path to output file to write junit formatted test results')
 
 args = parser.parse_args()
 
@@ -38,6 +39,7 @@ InterpreterExePath = args.exe
 OutputDir = args.outdir
 IgnoreFailures = args.ignoreFailures
 UseColors = args.color
+JunitOut = args.junit
 
 # Construct program to test.
 tester = RT.TestExecutor(exePath=InterpreterExePath, verbose=Verbose)
@@ -52,6 +54,9 @@ outputs.add(RT.ConsoleOutputHandler(useColors=UseColors))
 
 if OutputDir is not None:
     outputs.add(RT.PosthocOutputHandler(outputDir=OutputDir, verbose=Verbose))
+
+if JunitOut is not None:
+    outputs.add(RT.JunitOutputHandler(JunitOut))
 
 runner = RT.TestRunner(tester, scenarios, outputs, ignoreFailures=IgnoreFailures)
 result = runner.run()
