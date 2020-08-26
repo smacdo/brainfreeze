@@ -3,6 +3,7 @@
 #include "../console.h"
 #include <Windows.h>
 #include <queue>
+#include <optional>
 
 namespace Brainfreeze::CommandLineApp
 {
@@ -17,10 +18,10 @@ namespace Brainfreeze::CommandLineApp
         virtual void write(char d, OutputStreamName stream) override;
 
         /** Write a string to standard output. */
-        virtual void write(std::string_view message, OutputStreamName stream) override;
+        virtual void write(std::string_view message, OutputStreamName streamName) override;
 
         /** Write a string to standard output and move to the next line. */
-        virtual void writeLine(std::string_view message, OutputStreamName stream) override;
+        virtual void writeLine(std::string_view message, OutputStreamName streamName) override;
 
         /** Read a byte from the Windows console. */
         virtual char read() override;
@@ -78,29 +79,16 @@ namespace Brainfreeze::CommandLineApp
         void clearInputBuffer();
         void raiseError(DWORD error, const char* action, const char* filename, int lineNumber);
 
+        struct stream_data_t;
+
+        void initStream(stream_data_t* streamData, HANDLE standardHandle, bool isOutputHandle);
+        void restoreStreamPrevState(const stream_data_t& stream);
+
     private:
         static const size_t DefaultBufferSize = 256;
 
         /// Internal buffer of characters read from the input device.
         std::queue<char> bufferedChars_;
-
-        /// Standard input handle. Could be the console input buffer or a redirected input stream.
-        HANDLE inputHandle_ = INVALID_HANDLE_VALUE;
-
-        /// Standard output handle. Could be the console output buffer or a redirected output stream.
-        HANDLE outputHandle_ = INVALID_HANDLE_VALUE;
-
-        /// Standard error handle. Could be the console output buffer or a redirected output stream.
-        HANDLE errorHandle_ = INVALID_HANDLE_VALUE;
-
-        /// Get if input handle is reading from console input buffer (true) or a redirected input stream (false).
-        bool bIsConsoleInput_ = true;
-
-        /// Get if output handle is writing to console output buffer (true) or a redirected output stream (false).
-        bool bIsConsoleOutput_ = true;
-
-        /// Get if error handle is writing to console ouput buffer (true) or redirected output stream (false).
-        bool bIsConsoleError_ = true;
 
         /// Get if input is line buffered (true) or unbuffered (false).
         bool bIsInputBuffered_ = true;
@@ -108,14 +96,20 @@ namespace Brainfreeze::CommandLineApp
         /// Get if input is echoed (true) or not echoed (false).
         bool bIsInputEchoed_ = true;
 
-        /// Saved console input mode from prior to instantiating the console.
-        DWORD prevConsoleInputMode_ = 0;
+    private:
+        struct stream_data_t
+        {
+            bool isConsole = false;
+            bool isOutput = false;
+            HANDLE handle = INVALID_HANDLE_VALUE;
+            DWORD prevMode = 0;
+            WORD outputCharAttributes = 0;  // TODO: prevXX
+        };
 
-        /// Saved console output mode from prior to instantiating the console.
-        DWORD prevConsoleOutputMode_ = 0;
+        stream_data_t inputStream_;
+        stream_data_t outputStream_;
+        stream_data_t errorStream_;
 
-        /// Saved console output character attributes from prior to instantiating the console.
-        WORD prevConsoleOutputCharAttributes_ = 0;
         AnsiColor currentTextForegroundColor_ = AnsiColor::Black;
         AnsiColor currentTextBackgroundColor_ = AnsiColor::Black;
         std::string windowTitle_;

@@ -85,81 +85,34 @@ namespace
 
 //---------------------------------------------------------------------------------------------------------------------
 WindowsConsole::WindowsConsole()
-    : bufferedChars_(),
-      inputHandle_(GetStdHandle(STD_INPUT_HANDLE)),
-      outputHandle_(GetStdHandle(STD_OUTPUT_HANDLE)),
-      errorHandle_(GetStdHandle(STD_ERROR_HANDLE))
+    : bufferedChars_()
 {
-    // Check that input and output handles are valid.
-    if (inputHandle_ == INVALID_HANDLE_VALUE)
+    initStream(&inputStream_, GetStdHandle(STD_INPUT_HANDLE), false);
+    initStream(&outputStream_, GetStdHandle(STD_OUTPUT_HANDLE), true);
+    initStream(&errorStream_, GetStdHandle(STD_ERROR_HANDLE), true);
+
+    // Get current text colors.
+    if (outputStream_.isConsole || errorStream_.isConsole)
     {
-        raiseError(0, "Failed to get standard input handle", __FILE__, __LINE__);
-    }
-
-    if (outputHandle_ == INVALID_HANDLE_VALUE)
-    {
-        raiseError(0, "Failed to get standard output handle", __FILE__, __LINE__);
-    }
-
-    if (errorHandle_ == INVALID_HANDLE_VALUE)
-    {
-        raiseError(0, "Failed to get standard error handle", __FILE__, __LINE__);
-    }
-
-    // Save the current console mode (and restore when finished) but only if input / output is a terminal. Otherwise
-    // either input or output is redirected and should not be treated as a console terminal.
-    bIsConsoleInput_ = (GetFileType(inputHandle_) == FILE_TYPE_CHAR);
-    bIsConsoleOutput_ = (GetFileType(outputHandle_) == FILE_TYPE_CHAR);
-    bIsConsoleError_ = (GetFileType(errorHandle_) == FILE_TYPE_CHAR);
-
-    if (bIsConsoleInput_ && !GetConsoleMode(inputHandle_, &prevConsoleInputMode_))
-    {
-        raiseError(GetLastError(), "Failed to save console input mode", __FILE__, __LINE__);
-    }
-
-    if (bIsConsoleOutput_ && !GetConsoleMode(outputHandle_, &prevConsoleOutputMode_))
-    {
-        raiseError(GetLastError(), "Failed to save console output mode", __FILE__, __LINE__);
-    }
-
-    // Save the current console output character attributes if output is not redirected.
-    if (bIsConsoleOutput_)
-    {
-        CONSOLE_SCREEN_BUFFER_INFO screenInfo;
-
-        if (!GetConsoleScreenBufferInfo(outputHandle_, &screenInfo))
-        {
-            raiseError(GetLastError(), "Failed to save console character attributes", __FILE__, __LINE__);
-        }
-
-        prevConsoleOutputCharAttributes_ = screenInfo.wAttributes;
-
-        // Set current text foreground and background colors.
-        currentTextForegroundColor_ = ExtractForegroundColor(prevConsoleOutputCharAttributes_);
-        currentTextBackgroundColor_ = ExtractBackgroundColor(prevConsoleOutputCharAttributes_);
+        auto attr = (outputStream_.isConsole ? outputStream_.outputCharAttributes : errorStream_.outputCharAttributes);
+        currentTextForegroundColor_ = ExtractForegroundColor(attr);
+        currentTextBackgroundColor_ = ExtractBackgroundColor(attr);
     }
 }
 
 //---------------------------------------------------------------------------------------------------------------------
 WindowsConsole::~WindowsConsole()
 {
-    // Restore potentially modified console i/o modes.
-    if (bIsConsoleInput_ && inputHandle_ != INVALID_HANDLE_VALUE)
-    {
-        SetConsoleMode(inputHandle_, prevConsoleInputMode_);
-    }
-
-    if (bIsConsoleOutput_ && outputHandle_ != INVALID_HANDLE_VALUE)
-    {
-        SetConsoleMode(outputHandle_, prevConsoleOutputMode_);
-        SetConsoleTextAttribute(outputHandle_, prevConsoleOutputCharAttributes_);
-    }
+    restoreStreamPrevState(inputStream_);
+    restoreStreamPrevState(outputStream_);
+    restoreStreamPrevState(errorStream_);
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-void WindowsConsole::write(char d, OutputStreamName stream)
+void WindowsConsole::write(char d, OutputStreamName streamName)
 {
-    auto handle = (stream == OutputStreamName::Stdout ? outputHandle_ : errorHandle_);
+    auto& stream = (streamName == OutputStreamName::Stdout ? outputStream_ : errorStream_);
+    auto handle = stream.handle;
 
     std::array<char, 2> outBuffer = { d, '\0' };
     
@@ -242,6 +195,8 @@ char WindowsConsole::read()
 //---------------------------------------------------------------------------------------------------------------------
 void WindowsConsole::readBuffered(bool waitForCharacter)
 {
+    assert(inputStream_.handle != INVALID_STREAM_HANDLE);
+
     // If there are unread characters in the input buffer exit early to avoid extra work to read more characters. It is
     // more efficient to batch work by waiting until the input buffer is drained and then reading as many characters
     // (up to the buffer size) as possible in one go.
@@ -264,11 +219,11 @@ void WindowsConsole::readBuffered(bool waitForCharacter)
 
     do 
     {
-        if (!ReadFile(inputHandle_, inputBuffer.data(), (DWORD)inputBuffer.size(), &numBytesRead, nullptr))
+        if (!ReadFile(inputStream_.handle, inputBuffer.data(), (DWORD)inputBuffer.size(), &numBytesRead, nullptr))
         {
             throw std::runtime_error("Failed to read input; ReadConsoleInput returned false");
         }
-    } while ((waitForCharacter || (bIsConsoleInput_ && waitForCharacter) && inputBuffer.empty()));
+    } while ((waitForCharacter || (inputStream_.isConsole && waitForCharacter) && inputBuffer.empty()));
 
     // Copy all characters into the character buffer.
     assert(numBytesRead <= inputBuffer.size());
@@ -291,30 +246,33 @@ void WindowsConsole::clearInputBuffer()
 //---------------------------------------------------------------------------------------------------------------------
 bool WindowsConsole::isInputRedirected() const
 {
-    return !bIsConsoleInput_;
+    return !inputStream_.isConsole;
 }
 
 //---------------------------------------------------------------------------------------------------------------------
 bool WindowsConsole::isOutputRedirected() const
 {
-    return !bIsConsoleOutput_;
+    return !outputStream_.isConsole;
 }
 
 //---------------------------------------------------------------------------------------------------------------------
 bool WindowsConsole::isErrorRedirected() const
 {
-    throw std::runtime_error("TODO: Implement me");
+    throw !errorStream_.isConsole;
 }
 
 //---------------------------------------------------------------------------------------------------------------------
 void WindowsConsole::setTextColor(AnsiColor foreground, AnsiColor background)
 {
-    if (!isOutputRedirected())
+    if (outputStream_.isConsole || errorStream_.isConsole)
     {
-        assert(outputHandle_ != INVALID_HANDLE_VALUE);
+        auto& stream = (outputStream_.isConsole ? outputStream_ : errorStream_);
+        auto handle = stream.handle;
+
+        assert(handle != INVALID_HANDLE_VALUE);
 
         auto color = GAnsiColorTable[(int)foreground].foreground | GAnsiColorTable[(int)background].background;
-        SetConsoleTextAttribute(outputHandle_, (WORD)color);
+        SetConsoleTextAttribute(handle, (WORD)color);
 
         currentTextForegroundColor_ = foreground;
         currentTextBackgroundColor_ = background;
@@ -355,13 +313,21 @@ void WindowsConsole::resetTextColors()
 //---------------------------------------------------------------------------------------------------------------------
 void WindowsConsole::resetTextForegroundColor()
 {
-    setTextForegroundColor(ExtractForegroundColor(prevConsoleOutputCharAttributes_));
+    if (outputStream_.isConsole || errorStream_.isConsole)
+    {
+        auto& stream = (outputStream_.isConsole ? outputStream_ : errorStream_);
+        setTextForegroundColor(ExtractForegroundColor(stream.outputCharAttributes));
+    }
 }
 
 //---------------------------------------------------------------------------------------------------------------------
 void WindowsConsole::resetTextBackgroundColor()
 {
-    setTextBackgroundColor(ExtractBackgroundColor(prevConsoleOutputCharAttributes_));
+    if (outputStream_.isConsole || errorStream_.isConsole)
+    {
+        auto& stream = (outputStream_.isConsole ? outputStream_ : errorStream_);
+        setTextBackgroundColor(ExtractBackgroundColor(stream.outputCharAttributes));
+    }
 }
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -383,7 +349,7 @@ void WindowsConsole::setInputBuffering(bool isEnabled)
     // Get the current input mode to change it.
     DWORD inputMode = 0;
 
-    if (!GetConsoleMode(inputHandle_, &inputMode))
+    if (!GetConsoleMode(inputStream_.handle, &inputMode))
     {
         raiseError(GetLastError(), "Failed to get console input mode", __FILE__, __LINE__);
         return;
@@ -400,7 +366,7 @@ void WindowsConsole::setInputBuffering(bool isEnabled)
     }
 
     // Now apply the input mode.
-    if (!SetConsoleMode(inputHandle_, inputMode))
+    if (!SetConsoleMode(inputStream_.handle, inputMode))
     {
         raiseError(GetLastError(), "Failed to set console input mode", __FILE__, __LINE__);
         return;
@@ -429,7 +395,7 @@ void WindowsConsole::setInputEchoing(bool isEnabled)
     // Get the current input mode to change it.
     DWORD inputMode = 0;
 
-    if (!GetConsoleMode(inputHandle_, &inputMode))
+    if (!GetConsoleMode(inputStream_.handle, &inputMode))
     {
         raiseError(GetLastError(), "Failed to get console input mode", __FILE__, __LINE__);
         return;
@@ -446,7 +412,7 @@ void WindowsConsole::setInputEchoing(bool isEnabled)
     }
 
     // Now apply the input mode.
-    if (!SetConsoleMode(inputHandle_, inputMode))
+    if (!SetConsoleMode(inputStream_.handle, inputMode))
     {
         raiseError(GetLastError(), "Failed to set console input mode", __FILE__, __LINE__);
         return;
@@ -491,6 +457,60 @@ void WindowsConsole::raiseError(DWORD error, const char* action, const char* fil
     
     // Print the formatted message to the console.
     // TODO: Print as bold red text.
+    // TODO: Make sure not INVALID_HANDLE
     auto formattedMessage = ss.str();
-    WriteFile(errorHandle_, formattedMessage.data(), (DWORD)formattedMessage.length(), nullptr, nullptr);
+    WriteFile(errorStream_.handle, formattedMessage.data(), (DWORD)formattedMessage.length(), nullptr, nullptr);
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+void WindowsConsole::initStream(stream_data_t* streamData, HANDLE standardHandle, bool isOutputHandle)
+{
+    assert(streamData != nullptr);
+
+    // Check that input and output handles are valid.
+    if (standardHandle == INVALID_HANDLE_VALUE)
+    {
+        raiseError(0, "Initial standard handle is not valid", __FILE__, __LINE__);
+        return;
+    }
+
+    // Save the current console mode (and restore when finished) but only if input / output is a terminal. Otherwise
+    // either input or output is redirected and should not be treated as a console terminal.
+    streamData->handle = standardHandle;
+    streamData->isOutput = isOutputHandle;
+    streamData->isConsole = (GetFileType(standardHandle) == FILE_TYPE_CHAR);
+
+    if (streamData->isConsole && !GetConsoleMode(standardHandle, &(streamData->prevMode)))
+    {
+        raiseError(GetLastError(), "Failed to save console mode", __FILE__, __LINE__);
+    }
+
+    // Save the current console output character attributes if output is not redirected.
+    if (isOutputHandle && streamData->isConsole)
+    {
+        CONSOLE_SCREEN_BUFFER_INFO screenInfo;
+
+        if (GetConsoleScreenBufferInfo(standardHandle, &screenInfo))
+        {
+            streamData->outputCharAttributes = screenInfo.wAttributes;
+        }
+        else
+        {
+            raiseError(GetLastError(), "Failed to save console character attributes", __FILE__, __LINE__);
+        }
+    }
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+void WindowsConsole::restoreStreamPrevState(const stream_data_t& stream)
+{
+    if (stream.handle != INVALID_HANDLE_VALUE)
+    {
+        SetConsoleMode(stream.handle, stream.prevMode);
+
+        if (stream.isOutput)
+        {
+            SetConsoleTextAttribute(stream.handle, stream.outputCharAttributes);
+        }
+    }
 }
